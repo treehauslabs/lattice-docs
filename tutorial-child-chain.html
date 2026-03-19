@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial: Child Chains — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="tutorials.html">Tutorials</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Tutorials</div>
+    <a href="tutorial-first-chain.html">Your First Chain</a>
+    <a href="tutorial-child-chain.html" class="active">Child Chains</a>
+    <a href="tutorial-cross-chain.html">Cross-Chain Transfers</a>
+    <a href="tutorial-encrypted-state.html">Verified State</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <p class="tutorial-breadcrumb"><a href="tutorials.html">Tutorials</a> &rarr; 02</p>
+    <h1>Child Chains</h1>
+    <p class="subtitle">Create an application-specific child chain anchored to a parent. Inherited security through merged mining, independent state and throughput.</p>
+
+    <h2>Why Child Chains?</h2>
+
+    <p>Lattice's key insight: you don't need one chain for everything. Child chains let you:</p>
+    <ul>
+        <li><strong>Isolate throughput</strong> — your app's traffic doesn't compete with others</li>
+        <li><strong>Customize rules</strong> — different block times, transaction filters, state limits</li>
+        <li><strong>Inherit security</strong> — merged mining means your chain benefits from the parent's hashrate</li>
+        <li><strong>Transfer value</strong> — move assets between parent and child via Merkle proofs</li>
+    </ul>
+
+    <div class="callout info">
+        <div class="callout-title">How merged mining works</div>
+        <p>When a miner finds a valid block for the parent chain, that same proof-of-work can simultaneously validate a child chain block. The child chain doesn't need its own dedicated miners — it piggybacks on the parent's security.</p>
+        <p>Parent blocks reference child block hashes, and child blocks reference their parent anchor. This bidirectional linking creates a verifiable hierarchy.</p>
+    </div>
+
+    <h2>Step 1: Set Up the Parent Chain</h2>
+
+    <p>Start with a standard parent node (from <a href="tutorial-first-chain.html">Tutorial 1</a>):</p>
+
+    <div class="code-label">main.swift</div>
+    <pre><code><span class="kw">import</span> Foundation
+<span class="kw">import</span> Lattice
+<span class="kw">import</span> AcornMemoryWorker
+
+<span class="kw">let</span> keyPair = <span class="ty">CryptoUtils</span>.generateKeyPair()
+
+<span class="cm">// Parent chain: the root of our chain hierarchy</span>
+<span class="kw">let</span> parentSpec = <span class="ty">ChainSpec</span>(
+    directory: <span class="str">"Nexus"</span>,
+    maxNumberOfTransactionsPerBlock: <span class="num">100</span>,
+    maxStateGrowth: <span class="num">100_000</span>,
+    premine: <span class="num">0</span>,
+    targetBlockTime: <span class="num">2_000</span>,
+    initialRewardExponent: <span class="num">10</span>
+)
+
+<span class="kw">let</span> genesisConfig = <span class="ty">GenesisConfig</span>.standard(spec: parentSpec)
+<span class="kw">let</span> nodeConfig = <span class="ty">LatticeNodeConfig</span>(
+    publicKey: keyPair.publicKey,
+    privateKey: keyPair.privateKey,
+    listenPort: <span class="num">4001</span>,
+    storagePath: URL(filePath: <span class="str">"/tmp/multi-chain"</span>),
+    enableLocalDiscovery: <span class="kw">true</span>
+)
+
+<span class="kw">let</span> node = <span class="kw">try await</span> <span class="ty">LatticeNode</span>(config: nodeConfig, genesisConfig: genesisConfig)
+<span class="kw">try await</span> node.start()</code></pre>
+
+    <h2>Step 2: Define the Child Chain Spec</h2>
+
+    <p>A child chain has its own <code>ChainSpec</code> with a unique <code>directory</code>. You can tune it for your application's specific needs:</p>
+
+    <pre><code><span class="cm">// Child chain: optimized for a high-frequency token application</span>
+<span class="kw">let</span> tokenChainSpec = <span class="ty">ChainSpec</span>(
+    directory: <span class="str">"TokenLedger"</span>,             <span class="cm">// unique identifier for this child chain</span>
+    maxNumberOfTransactionsPerBlock: <span class="num">500</span>, <span class="cm">// higher throughput than parent</span>
+    maxStateGrowth: <span class="num">200_000</span>,              <span class="cm">// more state space</span>
+    premine: <span class="num">0</span>,
+    targetBlockTime: <span class="num">500</span>,                <span class="cm">// 500ms blocks — 4x faster than parent</span>
+    initialRewardExponent: <span class="num">8</span>              <span class="cm">// smaller rewards (2^8 = 256)</span>
+)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Child chain design choices</div>
+        <p><strong>Faster blocks</strong> (500ms vs 2s): your token transfers confirm quickly.</p>
+        <p><strong>Higher throughput</strong> (500 txns vs 100): the child chain handles volume without congesting the parent.</p>
+        <p><strong>Smaller rewards</strong>: the child chain's token has a different economic model than the parent.</p>
+    </div>
+
+    <h2>Step 3: Register the Child Chain via GenesisAction</h2>
+
+    <p>Child chains are born through a <code>GenesisAction</code> in a parent chain transaction. This embeds the child's genesis block reference into the parent, creating a permanent cryptographic anchor.</p>
+
+    <pre><code><span class="cm">// Create the child chain's genesis block</span>
+<span class="kw">let</span> childGenesisConfig = <span class="ty">GenesisConfig</span>.standard(spec: tokenChainSpec)
+
+<span class="cm">// The GenesisAction tells the parent chain: "a new child chain exists"</span>
+<span class="kw">let</span> genesisAction = <span class="ty">GenesisAction</span>(
+    directory: <span class="str">"TokenLedger"</span>,
+    spec: tokenChainSpec
+)
+
+<span class="cm">// Wrap it in a transaction and submit to the parent chain</span>
+<span class="kw">let</span> body = <span class="ty">TransactionBody</span>(
+    accountActions: [],
+    actions: [],
+    depositActions: [],
+    genesisActions: [genesisAction],
+    peerActions: [],
+    receiptActions: [],
+    withdrawalActions: [],
+    signers: [<span class="ty">CryptoUtils</span>.sha256(keyPair.publicKey)],
+    fee: <span class="num">1</span>,
+    nonce: <span class="num">0</span>
+)
+
+<span class="kw">let</span> bodyData = body.toData()
+<span class="kw">let</span> bodyHash = <span class="ty">CryptoUtils</span>.sha256(<span class="ty">String</span>(data: bodyData, encoding: .utf8)!)
+<span class="kw">let</span> signature = <span class="ty">CryptoUtils</span>.sign(message: bodyHash, privateKeyHex: keyPair.privateKey)!
+
+<span class="kw">let</span> tx = <span class="ty">Transaction</span>(
+    signatures: [keyPair.publicKey: signature],
+    body: body
+)
+
+<span class="kw">await</span> node.submitTransaction(directory: <span class="str">"Nexus"</span>, transaction: tx)
+print(<span class="str">"Child chain genesis submitted to parent"</span>)</code></pre>
+
+    <h2>Step 4: Register the Network and Mine</h2>
+
+    <p>After the genesis action is mined into a parent block, register the child chain's network layer:</p>
+
+    <pre><code><span class="cm">// Register child chain network on the same node</span>
+<span class="kw">let</span> childIvyConfig = <span class="ty">IvyConfig</span>(
+    publicKey: keyPair.publicKey,
+    listenPort: <span class="num">4002</span>,               <span class="cm">// different port than parent</span>
+    bootstrapPeers: []
+)
+
+<span class="kw">try await</span> node.registerChainNetwork(
+    directory: <span class="str">"TokenLedger"</span>,
+    config: childIvyConfig
+)
+
+<span class="cm">// Start mining on both chains — merged mining shares work</span>
+<span class="kw">await</span> node.startMining(directory: <span class="str">"Nexus"</span>)
+<span class="kw">await</span> node.startMining(directory: <span class="str">"TokenLedger"</span>)
+
+print(<span class="str">"Mining on parent (Nexus) and child (TokenLedger)"</span>)</code></pre>
+
+    <h2>Step 5: Submit Transactions to the Child Chain</h2>
+
+    <p>Transactions to the child chain work identically — just target the child's directory:</p>
+
+    <pre><code><span class="kw">try await</span> <span class="ty">Task</span>.sleep(for: .seconds(<span class="num">5</span>))
+
+<span class="cm">// Create a token balance entry on the child chain</span>
+<span class="kw">let</span> tokenAction = <span class="ty">Action</span>(
+    key: <span class="str">"balance:</span>\(<span class="ty">CryptoUtils</span>.createAddress(from: keyPair.publicKey))<span class="str">"</span>,
+    oldValue: <span class="kw">nil</span>,
+    newValue: <span class="str">"1000000"</span>
+)
+
+<span class="kw">let</span> tokenBody = <span class="ty">TransactionBody</span>(
+    accountActions: [],
+    actions: [tokenAction],
+    depositActions: [],
+    genesisActions: [],
+    peerActions: [],
+    receiptActions: [],
+    withdrawalActions: [],
+    signers: [<span class="ty">CryptoUtils</span>.sha256(keyPair.publicKey)],
+    fee: <span class="num">1</span>,
+    nonce: <span class="num">1</span>
+)
+
+<span class="kw">let</span> tokenBodyData = tokenBody.toData()
+<span class="kw">let</span> tokenHash = <span class="ty">CryptoUtils</span>.sha256(<span class="ty">String</span>(data: tokenBodyData, encoding: .utf8)!)
+<span class="kw">let</span> tokenSig = <span class="ty">CryptoUtils</span>.sign(message: tokenHash, privateKeyHex: keyPair.privateKey)!
+
+<span class="kw">let</span> tokenTx = <span class="ty">Transaction</span>(
+    signatures: [keyPair.publicKey: tokenSig],
+    body: tokenBody
+)
+
+<span class="cm">// Submit to the child chain, not the parent</span>
+<span class="kw">await</span> node.submitTransaction(directory: <span class="str">"TokenLedger"</span>, transaction: tokenTx)
+print(<span class="str">"Token balance set on child chain"</span>)</code></pre>
+
+    <h2>The Chain Hierarchy</h2>
+
+    <p>After these steps, your node maintains two independent chains:</p>
+
+    <table>
+        <tr><th></th><th>Nexus (Parent)</th><th>TokenLedger (Child)</th></tr>
+        <tr><td><strong>Block Time</strong></td><td>2 seconds</td><td>500ms</td></tr>
+        <tr><td><strong>Txns/Block</strong></td><td>100</td><td>500</td></tr>
+        <tr><td><strong>Mining</strong></td><td>Independent PoW</td><td>Merged with parent</td></tr>
+        <tr><td><strong>State</strong></td><td>General purpose</td><td>Token-specific</td></tr>
+        <tr><td><strong>Security</strong></td><td>Own hashrate</td><td>Inherited from parent</td></tr>
+    </table>
+
+    <p>Each chain has its own state tree, mempool, and block history. They share the same P2P identity and storage layer, but are logically independent — a congested child chain doesn't slow down the parent.</p>
+
+    <div class="callout info">
+        <div class="callout-title">Scaling pattern</div>
+        This is Lattice's answer to the scalability trilemma. Instead of making one chain faster, you create purpose-built chains that inherit security from their parent. You can go arbitrarily deep — a child chain can have its own children.
+    </div>
+
+    <div class="tutorial-nav">
+        <a href="tutorial-first-chain.html" class="prev">&larr; Your First Chain</a>
+        <a href="tutorial-cross-chain.html" class="next">Next: Cross-Chain Transfers &rarr;</a>
+    </div>
+</main>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

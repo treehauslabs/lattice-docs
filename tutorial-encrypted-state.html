@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial: Verified State — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="tutorials.html">Tutorials</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Tutorials</div>
+    <a href="tutorial-first-chain.html">Your First Chain</a>
+    <a href="tutorial-child-chain.html">Child Chains</a>
+    <a href="tutorial-cross-chain.html">Cross-Chain Transfers</a>
+    <a href="tutorial-encrypted-state.html" class="active">Verified State</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <p class="tutorial-breadcrumb"><a href="tutorials.html">Tutorials</a> &rarr; 04</p>
+    <h1>Verified State</h1>
+    <p class="subtitle">Understand how Lattice uses Merkle trees for state verification, content-addressed storage, and trustless data integrity.</p>
+
+    <h2>The Big Idea</h2>
+
+    <p>Every piece of data in Lattice is <em>content-addressed</em>: its identifier is a hash of its content. This means:</p>
+    <ul>
+        <li><strong>Integrity is automatic</strong> — if you have the hash and the data, you can verify they match. No trust required.</li>
+        <li><strong>Deduplication is free</strong> — identical data always produces the same hash, so it's stored exactly once.</li>
+        <li><strong>Proofs are compact</strong> — you can prove a value exists in a huge state tree by providing just a small chain of hashes.</li>
+    </ul>
+
+    <h2>Content-Addressed Storage in Practice</h2>
+
+    <p>Every block, transaction, and state entry in Lattice goes through the <a href="acorn.html">Acorn</a> content-addressed storage layer.</p>
+
+    <pre><code><span class="kw">import</span> Acorn
+<span class="kw">import</span> AcornMemoryWorker
+
+<span class="kw">let</span> worker = <span class="ty">MemoryCASWorker</span>(capacity: <span class="num">10_000</span>)
+
+<span class="cm">// Store data — the CID is deterministic from content</span>
+<span class="kw">let</span> data = <span class="ty">Data</span>(<span class="str">"account:0xabc has balance 1000"</span>.utf8)
+<span class="kw">let</span> cid = <span class="ty">ContentIdentifier</span>(for: data)
+<span class="kw">await</span> worker.store(cid: cid, data: data)
+
+print(<span class="str">"CID: </span>\(cid.description)<span class="str">"</span>)
+<span class="cm">// CID: bafk...  (deterministic hash of the content)</span>
+
+<span class="cm">// Anyone with this CID can verify the data's integrity</span>
+<span class="kw">if let</span> retrieved = <span class="kw">await</span> worker.get(cid: cid) {
+    <span class="kw">let</span> valid = <span class="ty">ContentIdentifier</span>(for: retrieved) == cid
+    print(<span class="str">"Data integrity verified: </span>\(valid)<span class="str">"</span>)  <span class="cm">// true</span>
+}</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">CID guarantees</div>
+        A <code>ContentIdentifier</code> is a cryptographic commitment. If someone hands you a CID and data that matches it, you know the data hasn't been tampered with — even if the sender is malicious. This is the foundation of trustless verification.
+    </div>
+
+    <h2>Merkle Trees: The State Layer</h2>
+
+    <p>Lattice uses <a href="cashew.html">Cashew</a>'s Merkle data structures for all chain state. Each state entry is a leaf in a Merkle tree, and the tree's root hash commits to the entire state.</p>
+
+    <pre class="diagram"><code>          Root Hash: 0xabc123...
+              /            \
+         Hash(L+R)       Hash(L+R)
+          /    \          /    \
+    balance:A  balance:B  state:x  state:y
+    = 1000     = 500      = "foo"  = "bar"</code></pre>
+
+    <p>The root hash is stored in the block header. This means every block commits to the <em>entire</em> state at that point in time.</p>
+
+    <h2>How State Verification Works</h2>
+
+    <p>When you want to prove a specific value exists in the state, you don't need the full tree — just a <em>Merkle proof</em>: the sibling hashes along the path from the leaf to the root.</p>
+
+    <h3>What a Merkle Proof Contains</h3>
+
+    <pre class="diagram"><code>To prove balance:A = 1000 exists:
+
+    Root: 0xabc123     ← block header contains this
+         /       \
+    ✓ H(L+R)    [H(L+R)]  ← sibling hash provided
+      /    \
+  [balance:A]  [H(B)]     ← value + sibling hash provided
+   = 1000
+
+Proof = [value, sibling_hash_1, sibling_hash_2, ...]
+Size  = O(log n) hashes for n state entries</code></pre>
+
+    <p>A verifier recomputes the root from the proof. If it matches the root in the block header, the value is genuine.</p>
+
+    <h2>How Lattice Uses This Internally</h2>
+
+    <h3>Block State Commitments</h3>
+    <p>Every block contains state headers — Merkle roots for different state categories:</p>
+
+    <table>
+        <tr><th>State</th><th>Description</th><th>Used For</th></tr>
+        <tr><td><strong>Homestead</strong></td><td>Account balances and general state</td><td>Balance checks, state queries</td></tr>
+        <tr><td><strong>Frontier</strong></td><td>Pending operations (withdrawals, deposits)</td><td>Cross-chain verification</td></tr>
+        <tr><td><strong>Parent Homestead</strong></td><td>Parent chain's state reference</td><td>Child chain verifying parent</td></tr>
+    </table>
+
+    <h3>Transaction Validation via State</h3>
+    <p>When a miner validates a transaction, it checks the action's <code>oldValue</code> against the current state tree. If the state says key <code>"balance:A"</code> is <code>1000</code> but the transaction claims it's <code>500</code>, the transaction is rejected. This is verified via Merkle proof.</p>
+
+    <pre><code><span class="cm">// This action says: "change greeting from nil to hello"</span>
+<span class="kw">let</span> action = <span class="ty">Action</span>(
+    key: <span class="str">"greeting"</span>,
+    oldValue: <span class="kw">nil</span>,            <span class="cm">// asserts key doesn't exist yet</span>
+    newValue: <span class="str">"hello"</span>
+)
+
+<span class="cm">// If "greeting" already exists in the state tree,</span>
+<span class="cm">// the Merkle proof will show oldValue is wrong</span>
+<span class="cm">// → transaction rejected</span></code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Optimistic execution, verified state</div>
+        <p>Actions in Lattice are optimistic state transitions: the sender asserts what the current state is (<code>oldValue</code>) and what it should become (<code>newValue</code>). The network verifies these assertions against the Merkle state tree. Invalid assertions are rejected at the protocol level.</p>
+        <p>This is more flexible than account-model blockchains (like Ethereum) because it supports arbitrary key-value state, not just balance transfers. And it's more verifiable than UTXO models because the full state tree is committed in every block.</p>
+    </div>
+
+    <h2>Cross-Chain Verification</h2>
+
+    <p>This is where Merkle proofs really shine. When a child chain needs to verify a withdrawal on the parent chain (from <a href="tutorial-cross-chain.html">Tutorial 3</a>), it doesn't ask the parent — it reads the proof from the parent block that's anchored in the child's chain:</p>
+
+    <ol>
+        <li>Parent block includes a withdrawal in its state</li>
+        <li>Parent block hash is referenced in the child block (anchoring)</li>
+        <li>Child chain reads the parent block's state root</li>
+        <li>Child chain verifies the withdrawal exists via Merkle proof against that root</li>
+    </ol>
+
+    <p>No RPC calls, no trust assumptions, no bridge validators. The proof is in the math.</p>
+
+    <h2>The Storage Stack</h2>
+
+    <p>Merkle trees are backed by the tiered Acorn storage chain. When you verify a proof, the CAS layer fetches each node:</p>
+
+    <pre class="diagram"><code>Verification request: "Does key X exist in state root R?"
+
+    ① Check MemoryCASWorker (hot cache)
+        ↓ miss
+    ② Check DiskCASWorker (persistent store)
+        ↓ miss
+    ③ Fetch from NetworkCASWorker (P2P via Ivy)
+        ↓ found!
+    ④ Backfill: store in disk → store in memory
+    ⑤ Verify hash chain from leaf to root R</code></pre>
+
+    <p>This layered approach means frequently-accessed state stays in memory, cold state lives on disk, and missing data is transparently fetched from peers.</p>
+
+    <h2>Practical Implications</h2>
+
+    <table>
+        <tr><th>Scenario</th><th>How Merkle State Helps</th></tr>
+        <tr>
+            <td>Light client</td>
+            <td>Verify any state entry with just the block header and a small proof — no need to download the full state</td>
+        </tr>
+        <tr>
+            <td>Cross-chain transfers</td>
+            <td>Trustlessly verify operations on other chains using embedded state roots</td>
+        </tr>
+        <tr>
+            <td>State sync</td>
+            <td>New nodes can verify state snapshots without replaying every block from genesis</td>
+        </tr>
+        <tr>
+            <td>Fraud detection</td>
+            <td>Anyone can prove a block contains invalid state transitions by showing the Merkle proof contradicts the claimed oldValue</td>
+        </tr>
+        <tr>
+            <td>Sparse storage</td>
+            <td>Nodes don't need the full state tree — they can lazily load branches on demand from the CAS layer</td>
+        </tr>
+    </table>
+
+    <h2>What's Next</h2>
+
+    <p>You've now covered the four core concepts of Lattice:</p>
+    <ol>
+        <li><a href="tutorial-first-chain.html">Running a chain</a> — genesis, mining, transactions</li>
+        <li><a href="tutorial-child-chain.html">Child chains</a> — hierarchy, merged mining, independent throughput</li>
+        <li><a href="tutorial-cross-chain.html">Cross-chain transfers</a> — withdrawal/deposit/receipt lifecycle</li>
+        <li><strong>Verified state</strong> — Merkle proofs, CAS, trustless verification</li>
+    </ol>
+
+    <p>Explore the API reference for each package:</p>
+    <ul>
+        <li><a href="lattice.html">Lattice</a> — node, chain, mining, transactions</li>
+        <li><a href="cashew.html">Cashew</a> — Merkle data structures</li>
+        <li><a href="acorn.html">Acorn</a> — content-addressed storage protocol</li>
+        <li><a href="ivy.html">Ivy</a> — P2P networking and DHT</li>
+        <li><a href="tally.html">Tally</a> — peer reputation and rate limiting</li>
+    </ul>
+
+    <div class="tutorial-nav">
+        <a href="tutorial-cross-chain.html" class="prev">&larr; Cross-Chain Transfers</a>
+        <a href="tutorials.html" class="next">All Tutorials</a>
+    </div>
+</main>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

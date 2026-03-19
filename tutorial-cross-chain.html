@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial: Cross-Chain Transfers — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="tutorials.html">Tutorials</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Tutorials</div>
+    <a href="tutorial-first-chain.html">Your First Chain</a>
+    <a href="tutorial-child-chain.html">Child Chains</a>
+    <a href="tutorial-cross-chain.html" class="active">Cross-Chain Transfers</a>
+    <a href="tutorial-encrypted-state.html">Verified State</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <p class="tutorial-breadcrumb"><a href="tutorials.html">Tutorials</a> &rarr; 03</p>
+    <h1>Cross-Chain Transfers</h1>
+    <p class="subtitle">Move value between parent and child chains using withdrawal-deposit pairs and Merkle proofs. Trustless, no bridge needed.</p>
+
+    <h2>How Cross-Chain Transfers Work</h2>
+
+    <p>Unlike bridge-based systems (where you trust a third party to relay), Lattice's cross-chain transfers are <em>native</em>. The protocol itself verifies transfers using Merkle proofs embedded in the chain hierarchy.</p>
+
+    <p>The flow has three steps:</p>
+
+    <div class="step-flow">
+        <div class="step-box">
+            <span class="step-num">1</span>
+            <strong>Withdrawal</strong>
+            <p>Lock funds on the source chain</p>
+        </div>
+        <div class="step-arrow">&rarr;</div>
+        <div class="step-box">
+            <span class="step-num">2</span>
+            <strong>Deposit</strong>
+            <p>Claim funds on the destination chain</p>
+        </div>
+        <div class="step-arrow">&rarr;</div>
+        <div class="step-box">
+            <span class="step-num">3</span>
+            <strong>Receipt</strong>
+            <p>Finalize and prove the transfer completed</p>
+        </div>
+    </div>
+
+    <h2>Step 1: Create a Withdrawal on the Parent Chain</h2>
+
+    <p>A <code>WithdrawalAction</code> locks funds on the parent chain. The <code>nonce</code> uniquely identifies this transfer, and the <code>demander</code> specifies who can claim the funds on the other side.</p>
+
+    <pre><code><span class="kw">import</span> Foundation
+<span class="kw">import</span> Lattice
+
+<span class="kw">let</span> sender = <span class="ty">CryptoUtils</span>.generateKeyPair()
+<span class="kw">let</span> receiver = <span class="ty">CryptoUtils</span>.generateKeyPair()
+
+<span class="cm">// The demander hash identifies who can claim these funds</span>
+<span class="kw">let</span> demanderHash = <span class="ty">CryptoUtils</span>.sha256(receiver.publicKey)
+
+<span class="cm">// Create a unique nonce for this transfer</span>
+<span class="kw">let</span> transferNonce: <span class="ty">UInt128</span> = <span class="num">1</span>
+
+<span class="cm">// Step 1: Withdraw 500 from the parent chain</span>
+<span class="kw">let</span> withdrawal = <span class="ty">WithdrawalAction</span>(
+    withdrawer: <span class="ty">CryptoUtils</span>.sha256(sender.publicKey),
+    nonce: transferNonce,
+    demander: demanderHash,
+    amountDemanded: <span class="num">500</span>,
+    amountWithdrawn: <span class="num">500</span>
+)
+
+<span class="kw">let</span> withdrawBody = <span class="ty">TransactionBody</span>(
+    accountActions: [],
+    actions: [],
+    depositActions: [],
+    genesisActions: [],
+    peerActions: [],
+    receiptActions: [],
+    withdrawalActions: [withdrawal],
+    signers: [<span class="ty">CryptoUtils</span>.sha256(sender.publicKey)],
+    fee: <span class="num">1</span>,
+    nonce: <span class="num">0</span>
+)
+
+<span class="cm">// Sign and submit to the parent chain</span>
+<span class="kw">let</span> wData = withdrawBody.toData()
+<span class="kw">let</span> wHash = <span class="ty">CryptoUtils</span>.sha256(<span class="ty">String</span>(data: wData, encoding: .utf8)!)
+<span class="kw">let</span> wSig = <span class="ty">CryptoUtils</span>.sign(message: wHash, privateKeyHex: sender.privateKey)!
+
+<span class="kw">let</span> withdrawTx = <span class="ty">Transaction</span>(
+    signatures: [sender.publicKey: wSig],
+    body: withdrawBody
+)
+
+<span class="kw">await</span> node.submitTransaction(directory: <span class="str">"Nexus"</span>, transaction: withdrawTx)
+print(<span class="str">"Withdrawal submitted to parent chain"</span>)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Withdrawal locking</div>
+        <p>Once mined, the <code>WithdrawalAction</code> locks the specified amount in the parent chain's withdrawal state. The funds are debited from the sender's account but not yet credited anywhere — they're in limbo until the deposit side completes.</p>
+    </div>
+
+    <h2>Step 2: Deposit on the Child Chain</h2>
+
+    <p>The receiver creates a <code>DepositAction</code> on the child chain. The <code>nonce</code> must match the withdrawal, proving these are two halves of the same transfer.</p>
+
+    <pre><code><span class="cm">// Step 2: Deposit the same amount on the child chain</span>
+<span class="kw">let</span> deposit = <span class="ty">DepositAction</span>(
+    nonce: transferNonce,              <span class="cm">// must match the withdrawal</span>
+    demander: demanderHash,            <span class="cm">// must match the withdrawal</span>
+    amountDemanded: <span class="num">500</span>,               <span class="cm">// must match the withdrawal</span>
+    amountDeposited: <span class="num">500</span>
+)
+
+<span class="kw">let</span> depositBody = <span class="ty">TransactionBody</span>(
+    accountActions: [],
+    actions: [],
+    depositActions: [deposit],
+    genesisActions: [],
+    peerActions: [],
+    receiptActions: [],
+    withdrawalActions: [],
+    signers: [<span class="ty">CryptoUtils</span>.sha256(receiver.publicKey)],
+    fee: <span class="num">1</span>,
+    nonce: <span class="num">0</span>
+)
+
+<span class="kw">let</span> dData = depositBody.toData()
+<span class="kw">let</span> dHash = <span class="ty">CryptoUtils</span>.sha256(<span class="ty">String</span>(data: dData, encoding: .utf8)!)
+<span class="kw">let</span> dSig = <span class="ty">CryptoUtils</span>.sign(message: dHash, privateKeyHex: receiver.privateKey)!
+
+<span class="kw">let</span> depositTx = <span class="ty">Transaction</span>(
+    signatures: [receiver.publicKey: dSig],
+    body: depositBody
+)
+
+<span class="kw">await</span> node.submitTransaction(directory: <span class="str">"TokenLedger"</span>, transaction: depositTx)
+print(<span class="str">"Deposit submitted to child chain"</span>)</code></pre>
+
+    <h2>Step 3: Receipt on the Parent Chain</h2>
+
+    <p>The final step: a <code>ReceiptAction</code> on the parent chain that proves the deposit was completed. This closes the loop and finalizes the locked withdrawal.</p>
+
+    <pre><code><span class="cm">// Step 3: Receipt proves the deposit completed</span>
+<span class="kw">let</span> receipt = <span class="ty">ReceiptAction</span>(
+    withdrawer: <span class="ty">CryptoUtils</span>.sha256(sender.publicKey),
+    nonce: transferNonce,
+    demander: demanderHash,
+    amountDemanded: <span class="num">500</span>,
+    directory: <span class="str">"TokenLedger"</span>  <span class="cm">// identifies which child chain received the deposit</span>
+)
+
+<span class="kw">let</span> receiptBody = <span class="ty">TransactionBody</span>(
+    accountActions: [],
+    actions: [],
+    depositActions: [],
+    genesisActions: [],
+    peerActions: [],
+    receiptActions: [receipt],
+    withdrawalActions: [],
+    signers: [<span class="ty">CryptoUtils</span>.sha256(sender.publicKey)],
+    fee: <span class="num">1</span>,
+    nonce: <span class="num">1</span>
+)
+
+<span class="kw">let</span> rData = receiptBody.toData()
+<span class="kw">let</span> rHash = <span class="ty">CryptoUtils</span>.sha256(<span class="ty">String</span>(data: rData, encoding: .utf8)!)
+<span class="kw">let</span> rSig = <span class="ty">CryptoUtils</span>.sign(message: rHash, privateKeyHex: sender.privateKey)!
+
+<span class="kw">let</span> receiptTx = <span class="ty">Transaction</span>(
+    signatures: [sender.publicKey: rSig],
+    body: receiptBody
+)
+
+<span class="kw">await</span> node.submitTransaction(directory: <span class="str">"Nexus"</span>, transaction: receiptTx)
+print(<span class="str">"Receipt submitted — transfer complete"</span>)</code></pre>
+
+    <h2>The Verification Flow</h2>
+
+    <p>Each step is verified by the protocol before inclusion in a block:</p>
+
+    <table>
+        <tr><th>Step</th><th>Chain</th><th>Verification</th></tr>
+        <tr>
+            <td><strong>Withdrawal</strong></td>
+            <td>Parent</td>
+            <td>Sender has sufficient balance. Nonce is unique. Funds are locked.</td>
+        </tr>
+        <tr>
+            <td><strong>Deposit</strong></td>
+            <td>Child</td>
+            <td>Matching withdrawal exists in parent state (verified via Merkle proof from parent block anchored in child). Nonce, demander, and amount match.</td>
+        </tr>
+        <tr>
+            <td><strong>Receipt</strong></td>
+            <td>Parent</td>
+            <td>Matching deposit exists in child state (verified via Merkle proof from child block referenced in parent). Finalizes the locked withdrawal.</td>
+        </tr>
+    </table>
+
+    <div class="callout info">
+        <div class="callout-title">Why Merkle proofs matter</div>
+        <p>The child chain can verify the withdrawal exists on the parent without trusting anyone — it reads the proof directly from the parent block that's anchored in the child chain. Similarly, the parent verifies the deposit via child block references.</p>
+        <p>This is fundamentally different from bridge-based systems: there's no multisig, no validator committee, no trust assumption beyond the chains themselves.</p>
+    </div>
+
+    <h2>Transfer Lifecycle Diagram</h2>
+
+    <pre class="diagram"><code>Parent (Nexus)          Child (TokenLedger)
+     │                        │
+     │  ① Withdrawal          │
+     │  Lock 500 tokens       │
+     │  nonce: 1              │
+     │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─▶│
+     │                        │  ② Deposit
+     │   Merkle proof         │  Credit 500 tokens
+     │   of withdrawal        │  Verify nonce: 1
+     │◀─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─│
+     │  ③ Receipt             │
+     │  Finalize lock         │
+     │  Verify deposit proof  │
+     │                        │
+     ▼                        ▼
+  Withdrawal closed       Funds available</code></pre>
+
+    <h2>Key Constraints</h2>
+
+    <ul>
+        <li><strong>Nonce uniqueness</strong> — each transfer gets a unique <code>UInt128</code> nonce. A nonce can only be used once across the withdrawal-deposit-receipt triplet.</li>
+        <li><strong>Amount matching</strong> — <code>amountDemanded</code> must be identical across all three actions. The protocol rejects mismatches.</li>
+        <li><strong>Demander binding</strong> — only the keyholder whose hash matches <code>demander</code> can create the deposit. This prevents front-running.</li>
+        <li><strong>Ordering</strong> — withdrawal must be mined before deposit can be verified; deposit must be mined before receipt can be verified. The protocol enforces this via state checks.</li>
+    </ul>
+
+    <div class="tutorial-nav">
+        <a href="tutorial-child-chain.html" class="prev">&larr; Child Chains</a>
+        <a href="tutorial-encrypted-state.html" class="next">Next: Verified State &rarr;</a>
+    </div>
+</main>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

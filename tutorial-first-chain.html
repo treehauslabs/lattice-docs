@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial: Your First Chain — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="tutorials.html">Tutorials</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Tutorials</div>
+    <a href="tutorial-first-chain.html" class="active">Your First Chain</a>
+    <a href="tutorial-child-chain.html">Child Chains</a>
+    <a href="tutorial-cross-chain.html">Cross-Chain Transfers</a>
+    <a href="tutorial-encrypted-state.html">Verified State</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <p class="tutorial-breadcrumb"><a href="tutorials.html">Tutorials</a> &rarr; 01</p>
+    <h1>Your First Chain</h1>
+    <p class="subtitle">Create a Lattice node, start mining, submit a transaction, and query chain state. Under 50 lines of Swift.</p>
+
+    <h2>What You'll Build</h2>
+    <p>A standalone blockchain node that:</p>
+    <ul>
+        <li>Creates a genesis block with a custom chain specification</li>
+        <li>Mines blocks with proof-of-work</li>
+        <li>Submits a state-mutating transaction</li>
+        <li>Queries chain height and block data</li>
+    </ul>
+
+    <h2>Step 1: Create the Project</h2>
+
+    <p>The fastest way is with the CLI:</p>
+
+    <pre><code>lattice init my-first-chain
+<span class="kw">cd</span> my-first-chain</code></pre>
+
+    <p>Or create it manually. Your <code>Package.swift</code>:</p>
+
+    <div class="code-label">Package.swift</div>
+    <pre><code><span class="cm">// swift-tools-version: 6.0</span>
+<span class="kw">import</span> PackageDescription
+
+<span class="kw">let</span> package = <span class="ty">Package</span>(
+    name: <span class="str">"MyFirstChain"</span>,
+    platforms: [.macOS(.v15)],
+    dependencies: [
+        .package(url: <span class="str">"https://github.com/treehauslabs/lattice.git"</span>, branch: <span class="str">"main"</span>),
+        .package(url: <span class="str">"https://github.com/treehauslabs/AcornMemoryWorker.git"</span>, branch: <span class="str">"main"</span>),
+    ],
+    targets: [
+        .executableTarget(name: <span class="str">"MyFirstChain"</span>, dependencies: [
+            .product(name: <span class="str">"Lattice"</span>, package: <span class="str">"lattice"</span>),
+            .product(name: <span class="str">"AcornMemoryWorker"</span>, package: <span class="str">"AcornMemoryWorker"</span>),
+        ]),
+    ]
+)</code></pre>
+
+    <h2>Step 2: Define the Chain Spec</h2>
+
+    <p>A <code>ChainSpec</code> defines the rules of your blockchain — block timing, rewards, capacity limits. Think of it as the constitution your chain will operate under.</p>
+
+    <div class="code-label">Sources/MyFirstChain/main.swift</div>
+    <pre><code><span class="kw">import</span> Foundation
+<span class="kw">import</span> Lattice
+<span class="kw">import</span> AcornMemoryWorker
+
+<span class="kw">let</span> spec = <span class="ty">ChainSpec</span>(
+    directory: <span class="str">"MyChain"</span>,                  <span class="cm">// unique chain identifier</span>
+    maxNumberOfTransactionsPerBlock: <span class="num">50</span>,    <span class="cm">// transactions per block</span>
+    maxStateGrowth: <span class="num">50_000</span>,                 <span class="cm">// max state bytes per block</span>
+    premine: <span class="num">0</span>,                              <span class="cm">// no pre-mined blocks</span>
+    targetBlockTime: <span class="num">2_000</span>,                 <span class="cm">// 2 second blocks</span>
+    initialRewardExponent: <span class="num">10</span>               <span class="cm">// reward = 2^10 = 1024 per block</span>
+)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Chain Spec parameters</div>
+        <p><strong>directory</strong> is the chain's name — like a namespace. The root chain is typically <code>"Nexus"</code>.</p>
+        <p><strong>targetBlockTime</strong> is in milliseconds. Difficulty auto-adjusts to maintain this pace.</p>
+        <p><strong>initialRewardExponent</strong> sets the mining reward as 2<sup>n</sup>. Rewards halve periodically like Bitcoin.</p>
+    </div>
+
+    <h2>Step 3: Generate Keys and Create the Node</h2>
+
+    <p>Every node needs an identity — a P256 keypair. The public key is your node's address on the network.</p>
+
+    <pre><code><span class="kw">let</span> keyPair = <span class="ty">CryptoUtils</span>.generateKeyPair()
+<span class="kw">let</span> address = <span class="ty">CryptoUtils</span>.createAddress(from: keyPair.publicKey)
+print(<span class="str">"Node address: </span>\(address)<span class="str">"</span>)
+
+<span class="kw">let</span> genesisConfig = <span class="ty">GenesisConfig</span>.standard(spec: spec)
+
+<span class="kw">let</span> nodeConfig = <span class="ty">LatticeNodeConfig</span>(
+    publicKey: keyPair.publicKey,
+    privateKey: keyPair.privateKey,
+    listenPort: <span class="num">4001</span>,
+    storagePath: URL(filePath: <span class="str">"/tmp/my-first-chain"</span>),
+    enableLocalDiscovery: <span class="kw">true</span>
+)
+
+<span class="kw">let</span> node = <span class="kw">try await</span> <span class="ty">LatticeNode</span>(config: nodeConfig, genesisConfig: genesisConfig)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">What happens at init</div>
+        The node constructor runs the <strong>genesis ceremony</strong> — it creates the first block (block 0), initializes the chain state, and sets up the storage layer. No network connections are made yet.
+    </div>
+
+    <h2>Step 4: Start the Node and Mine</h2>
+
+    <pre><code><span class="kw">try await</span> node.start()
+print(<span class="str">"Node started on port </span>\(nodeConfig.listenPort)<span class="str">"</span>)
+
+<span class="cm">// Start mining on our chain</span>
+<span class="kw">await</span> node.startMining(directory: <span class="str">"MyChain"</span>)
+print(<span class="str">"Mining started..."</span>)</code></pre>
+
+    <p><code>start()</code> brings up the P2P networking layer and begins accepting connections. <code>startMining</code> spins up the proof-of-work miner for the specified chain directory.</p>
+
+    <h2>Step 5: Query Chain State</h2>
+
+    <p>Give the miner a few seconds to produce blocks, then query the chain:</p>
+
+    <pre><code><span class="cm">// Wait for a few blocks to be mined</span>
+<span class="kw">try await</span> <span class="ty">Task</span>.sleep(for: .seconds(<span class="num">10</span>))
+
+<span class="kw">let</span> chainState = <span class="kw">await</span> node.genesisResult.chainState
+<span class="kw">let</span> height = <span class="kw">await</span> chainState.getHighestBlockIndex()
+<span class="kw">let</span> tip = <span class="kw">await</span> chainState.getMainChainTip()
+
+print(<span class="str">"Chain height: </span>\(height)<span class="str">"</span>)
+print(<span class="str">"Chain tip: </span>\(tip)<span class="str">"</span>)
+
+<span class="cm">// Get the latest block details</span>
+<span class="kw">let</span> latestBlock = <span class="kw">await</span> chainState.getHighestBlock()
+print(<span class="str">"Latest block hash: </span>\(latestBlock.blockHash)<span class="str">"</span>)
+print(<span class="str">"Previous block: </span>\(latestBlock.previousBlockHash ?? <span class="str">"genesis"</span>)<span class="str">"</span>)</code></pre>
+
+    <h2>Step 6: Submit a Transaction</h2>
+
+    <p>Transactions mutate on-chain state. Each transaction contains <em>actions</em> — key-value operations — and must be signed by its sender.</p>
+
+    <pre><code><span class="cm">// Create a state-mutating action: set key "greeting" to "hello lattice"</span>
+<span class="kw">let</span> action = <span class="ty">Action</span>(
+    key: <span class="str">"greeting"</span>,
+    oldValue: <span class="kw">nil</span>,            <span class="cm">// nil = this key doesn't exist yet (insertion)</span>
+    newValue: <span class="str">"hello lattice"</span>  <span class="cm">// the value to store</span>
+)
+
+<span class="cm">// Build the transaction body</span>
+<span class="kw">let</span> body = <span class="ty">TransactionBody</span>(
+    accountActions: [],
+    actions: [action],
+    depositActions: [],
+    genesisActions: [],
+    peerActions: [],
+    receiptActions: [],
+    withdrawalActions: [],
+    signers: [<span class="ty">CryptoUtils</span>.sha256(keyPair.publicKey)],
+    fee: <span class="num">1</span>,
+    nonce: <span class="num">0</span>
+)
+
+<span class="cm">// Sign and submit</span>
+<span class="kw">let</span> bodyData = body.toData()
+<span class="kw">let</span> bodyHash = <span class="ty">CryptoUtils</span>.sha256(<span class="ty">String</span>(data: bodyData, encoding: .utf8)!)
+<span class="kw">let</span> signature = <span class="ty">CryptoUtils</span>.sign(message: bodyHash, privateKeyHex: keyPair.privateKey)!
+
+<span class="kw">let</span> transaction = <span class="ty">Transaction</span>(
+    signatures: [keyPair.publicKey: signature],
+    body: body
+)
+
+<span class="kw">let</span> accepted = <span class="kw">await</span> node.submitTransaction(directory: <span class="str">"MyChain"</span>, transaction: transaction)
+print(<span class="str">"Transaction </span>\(accepted ? <span class="str">"accepted"</span> : <span class="str">"rejected"</span>)<span class="str">"</span>)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Transaction anatomy</div>
+        <p><strong>Actions</strong> are state mutations: <code>key</code> + <code>oldValue</code> + <code>newValue</code>. Setting <code>oldValue: nil</code> creates a new key; setting <code>newValue: nil</code> deletes one.</p>
+        <p><strong>Signers</strong> is the SHA256 hash of each public key that must sign. The <code>signatures</code> map proves authorization.</p>
+        <p><strong>Fee</strong> goes to the miner who includes your transaction in a block.</p>
+    </div>
+
+    <h2>Step 7: Graceful Shutdown</h2>
+
+    <pre><code><span class="kw">await</span> node.stopMining(directory: <span class="str">"MyChain"</span>)
+<span class="kw">await</span> node.stop()
+print(<span class="str">"Node stopped"</span>)</code></pre>
+
+    <h2>Run It</h2>
+
+    <pre><code>swift run</code></pre>
+
+    <p>You should see:</p>
+    <pre><code>Node address: 0x3a7f...
+Node started on port 4001
+Mining started...
+Chain height: 4
+Chain tip: a8c3e9f1...
+Transaction accepted
+Node stopped</code></pre>
+
+    <h2>What's Happening Under the Hood</h2>
+
+    <table>
+        <tr><th>Layer</th><th>What it does</th></tr>
+        <tr><td><strong>LatticeNode</strong></td><td>Orchestrates everything: storage, mining, networking, mempool</td></tr>
+        <tr><td><strong>ChainState</strong></td><td>Tracks all blocks, the main chain, fork choice via cumulative work</td></tr>
+        <tr><td><strong>Miner</strong></td><td>Finds nonces that satisfy the difficulty target (proof-of-work)</td></tr>
+        <tr><td><strong>Mempool</strong></td><td>Holds pending transactions until a miner includes them in a block</td></tr>
+        <tr><td><strong>Acorn CAS</strong></td><td>Content-addressed storage for blocks, state trees, and transaction data</td></tr>
+    </table>
+
+    <div class="tutorial-nav">
+        <span></span>
+        <a href="tutorial-child-chain.html" class="next">Next: Child Chains &rarr;</a>
+    </div>
+</main>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

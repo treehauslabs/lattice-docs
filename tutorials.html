@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorials — Lattice Docs</title>
+    <meta name="description" content="Step-by-step tutorials for building on the Lattice blockchain.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="tutorials.html" class="active">Tutorials</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Tutorials</div>
+    <a href="tutorial-first-chain.html">Your First Chain</a>
+    <a href="tutorial-child-chain.html">Child Chains</a>
+    <a href="tutorial-cross-chain.html">Cross-Chain Transfers</a>
+    <a href="tutorial-encrypted-state.html">Encrypted State</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Tutorials</h1>
+    <p class="subtitle">Hands-on guides that walk you through building real applications on Lattice. Each tutorial builds on concepts from the previous one.</p>
+
+    <div class="tutorial-grid">
+        <a href="tutorial-first-chain.html" class="tutorial-card">
+            <span class="tutorial-num">01</span>
+            <h3>Your First Chain</h3>
+            <p>Set up a complete Lattice node from scratch. Create a chain spec, start mining, submit transactions, and query state — all in under 50 lines of Swift.</p>
+            <span class="tutorial-meta">~15 min &middot; Beginner</span>
+        </a>
+
+        <a href="tutorial-child-chain.html" class="tutorial-card">
+            <span class="tutorial-num">02</span>
+            <h3>Child Chains</h3>
+            <p>Create a child chain anchored to your parent chain. Learn how merged mining inherits security and how parent blocks flow into child chain state.</p>
+            <span class="tutorial-meta">~20 min &middot; Intermediate</span>
+        </a>
+
+        <a href="tutorial-cross-chain.html" class="tutorial-card">
+            <span class="tutorial-num">03</span>
+            <h3>Cross-Chain Transfers</h3>
+            <p>Move value between chains using Merkle proofs. Understand withdrawal actions, deposit receipts, and the cryptographic proof that makes it trustless.</p>
+            <span class="tutorial-meta">~25 min &middot; Intermediate</span>
+        </a>
+
+        <a href="tutorial-encrypted-state.html" class="tutorial-card">
+            <span class="tutorial-num">04</span>
+            <h3>Encrypted State</h3>
+            <p>Use Cashew's encrypted Merkle structures to store private data on-chain. Selective disclosure, encrypted queries, and proof generation over ciphertext.</p>
+            <span class="tutorial-meta">~20 min &middot; Advanced</span>
+        </a>
+    </div>
+
+    <h2>Prerequisites</h2>
+    <ul>
+        <li>Swift 6.0+ (macOS 15 or Linux)</li>
+        <li>Basic familiarity with Swift <code>async</code>/<code>await</code></li>
+        <li>The <a href="https://github.com/treehauslabs/lattice-cli">lattice CLI</a> installed (optional but recommended)</li>
+    </ul>
+
+    <div class="callout info">
+        <div class="callout-title">Fastest path</div>
+        If you just want to see a chain running: <code>lattice init my-chain && cd my-chain && swift run</code>. These tutorials explain <em>why</em> each piece works.
+    </div>
+</main>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

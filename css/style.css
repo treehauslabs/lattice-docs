@@ -811,6 +811,145 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 .vs-table .cross { color: var(--red); opacity: 0.6; }
 .vs-table .partial { color: var(--amber); }
 
+/* ── TUTORIALS ── */
+.tutorial-breadcrumb {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 0.25rem;
+}
+
+.tutorial-breadcrumb a {
+    color: var(--cyan);
+    text-decoration: none;
+}
+
+.tutorial-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.tutorial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+    margin: 1.5rem 0;
+}
+
+.tutorial-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.2s, transform 0.2s;
+}
+
+.tutorial-card:hover {
+    border-color: var(--cyan);
+    transform: translateY(-2px);
+}
+
+.tutorial-num {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--cyan);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.tutorial-card h3 {
+    font-size: 1.1rem;
+    color: var(--text-bright);
+}
+
+.tutorial-card p {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+
+.tutorial-meta {
+    font-size: 0.75rem;
+    color: var(--purple);
+    margin-top: auto;
+}
+
+.tutorial-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-dim);
+}
+
+.tutorial-nav a {
+    color: var(--cyan);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.tutorial-nav a:hover {
+    text-decoration: underline;
+}
+
+.step-flow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+}
+
+.step-box {
+    flex: 1;
+    min-width: 160px;
+    padding: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.step-box .step-num {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    border-radius: 50%;
+    background: var(--cyan);
+    color: var(--bg);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.step-box p {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 0.25rem;
+}
+
+.step-arrow {
+    color: var(--cyan);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+pre.diagram {
+    background: var(--bg-code);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--text-dim);
+}
+
 /* ── FOOTER ── */
 .site-footer {
     margin-left: var(--sidebar-w);
