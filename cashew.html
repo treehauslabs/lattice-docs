@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cashew — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Data Structures</div>
+    <a href="cashew.html">Cashew</a>
+    <a href="cashew.html#node" class="nested">Node Protocol</a>
+    <a href="cashew.html#header" class="nested">Header &amp; CIDs</a>
+    <a href="cashew.html#dictionary" class="nested">Merkle Dictionary</a>
+    <a href="cashew.html#array" class="nested">Merkle Array</a>
+    <a href="cashew.html#set" class="nested">Merkle Set</a>
+    <a href="cashew.html#resolution" class="nested">Lazy Resolution</a>
+    <a href="cashew.html#encryption" class="nested">Encryption</a>
+    <a href="cashew.html#proofs" class="nested">Sparse Proofs</a>
+    <a href="cashew.html#diff" class="nested">Diffing</a>
+    <a href="cashew.html#query" class="nested">Query Language</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Cashew <span class="pkg-badge" style="background: rgba(248, 113, 113, 0.12); color: #f87171;">Foundation</span></h1>
+    <p class="subtitle">Merkle data structures for content-addressed state. Dictionaries, arrays, and sets that are verifiable, diffable, lazily loadable, selectively encryptable, and provable — all backed by a compressed radix trie with IPFS-compatible CIDs.</p>
+
+    <pre><code>.package(url: <span class="str">"https://github.com/pumperknickle/cashew.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Why Cashew matters</div>
+        Cashew is the foundational data layer of Lattice. Every piece of state in the system — account balances, smart contract storage, transaction histories — is a Cashew Merkle structure. This means all state is inherently content-addressed (tamper-evident), lazily loadable (only fetch what you need), and diffable (compute exact changesets between versions). Acorn stores the raw bytes; Cashew gives those bytes structure and meaning.
+    </div>
+
+    <h2 id="node">Node Protocol</h2>
+    <p>The base protocol for all Merkle structures. A node is a tree of content-addressed children.</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">Node</span>: <span class="ty">Codable</span>, <span class="ty">LosslessStringConvertible</span>, <span class="ty">Sendable</span> {
+    <span class="kw">func</span> <span class="fn">get</span>(property: <span class="ty">PathSegment</span>) -> (<span class="kw">any</span> <span class="ty">Header</span>)?
+    <span class="kw">func</span> <span class="fn">properties</span>() -> <span class="ty">Set</span>&lt;<span class="ty">PathSegment</span>&gt;
+    <span class="kw">func</span> <span class="fn">set</span>(properties: [<span class="ty">PathSegment</span>: <span class="kw">any</span> <span class="ty">Header</span>]) -> <span class="ty">Self</span>
+}</code></pre>
+
+    <p>You implement three methods. The protocol extension provides everything else:</p>
+
+    <table>
+        <thead>
+            <tr><th>Provided Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>resolve(paths:fetcher:)</code></td><td>Lazily load specific paths from storage</td></tr>
+            <tr><td><code>storeRecursively(storer:)</code></td><td>Persist entire subtree to storage</td></tr>
+            <tr><td><code>transform(transforms:)</code></td><td>Apply batched mutations</td></tr>
+            <tr><td><code>proof(paths:fetcher:)</code></td><td>Generate sparse Merkle proofs</td></tr>
+            <tr><td><code>encrypt(encryption:)</code></td><td>Selectively encrypt subtrees</td></tr>
+            <tr><td><code>diff(from:)</code></td><td>Compute structural diff against another version</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Scalar Protocol</h3>
+    <p>Leaf nodes with no children. Provides no-op defaults for all tree-walking methods:</p>
+    <pre><code><span class="kw">public protocol</span> <span class="ty">Scalar</span>: <span class="ty">Node</span> { }</code></pre>
+    <p>String values in dictionaries and sets are scalars.</p>
+
+    <h2 id="header">Header &amp; Content Addressing</h2>
+    <p>A <code>Header</code> is a content-addressed reference to a <code>Node</code>. It holds a CID (SHA-256 hash) and optionally the deserialized node. Headers that haven't been loaded yet have <code>node == nil</code> — this is the basis of lazy loading.</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">Header</span>: <span class="ty">Codable</span>, <span class="ty">LosslessStringConvertible</span>, <span class="ty">Sendable</span> {
+    <span class="kw">associatedtype</span> <span class="ty">NodeType</span>: <span class="ty">Node</span>
+
+    <span class="kw">var</span> rawCID: <span class="ty">String</span> { <span class="kw">get</span> }
+    <span class="kw">var</span> node: <span class="ty">NodeType</span>? { <span class="kw">get</span> }
+    <span class="kw">var</span> encryptionInfo: <span class="ty">EncryptionInfo</span>? { <span class="kw">get</span> }
+}</code></pre>
+
+    <h3>Creating Headers</h3>
+    <pre><code><span class="cm">// From a node (CID computed automatically)</span>
+<span class="kw">let</span> header = <span class="ty">HeaderImpl</span>(node: myNode)
+print(header.rawCID) <span class="cm">// SHA-256 of serialized node</span>
+
+<span class="cm">// Lazy reference (CID only, node not loaded)</span>
+<span class="kw">let</span> lazy = <span class="ty">HeaderImpl</span>&lt;<span class="ty">MyNode</span>&gt;(rawCID: <span class="str">"bafy..."</span>)
+lazy.node <span class="cm">// nil — must resolve to load</span>
+
+<span class="cm">// Encrypted header</span>
+<span class="kw">let</span> encrypted = <span class="ty">HeaderImpl</span>(node: myNode, key: symmetricKey)</code></pre>
+
+    <h3>Resolving (Loading)</h3>
+    <pre><code><span class="cm">// Load this header's node from storage</span>
+<span class="kw">let</span> resolved = <span class="kw">try await</span> header.resolve(fetcher: myFetcher)
+resolved.node <span class="cm">// now loaded</span>
+
+<span class="cm">// Load entire subtree recursively</span>
+<span class="kw">let</span> full = <span class="kw">try await</span> header.resolveRecursive(fetcher: myFetcher)</code></pre>
+
+    <h3>CID Format</h3>
+    <p>CIDs follow the IPFS CIDv1 specification: multibase + multicodec + multihash. The hash function is SHA2-256. Encrypted headers serialize as <code>"enc:keyHash:iv:cid"</code>.</p>
+
+    <h2 id="dictionary">MerkleDictionary</h2>
+    <p>A key-value map backed by a compressed radix trie. Every mutation produces a new root with a new CID — previous versions remain valid and reachable.</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">MerkleDictionary</span>: <span class="ty">Node</span> {
+    <span class="kw">associatedtype</span> <span class="ty">ValueType</span>
+    <span class="kw">associatedtype</span> <span class="ty">ChildType</span>: <span class="ty">RadixHeader</span>
+}</code></pre>
+
+    <h3>Mutations</h3>
+    <p>All mutations are immutable — they return a new dictionary with the change applied:</p>
+
+    <pre><code><span class="kw">var</span> dict = <span class="ty">MerkleDictionaryImpl</span>&lt;<span class="ty">String</span>&gt;()
+
+<span class="cm">// Insert a new key</span>
+dict = dict.inserting(key: <span class="str">"alice"</span>, value: <span class="str">"100"</span>)
+
+<span class="cm">// Update an existing key</span>
+dict = dict.mutating(key: <span class="str">"alice"</span>, value: <span class="str">"200"</span>)
+
+<span class="cm">// Delete a key</span>
+dict = dict.deleting(key: <span class="str">"alice"</span>)</code></pre>
+
+    <h3>Queries</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Return</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>get(key:)</code></td><td><code>ValueType?</code></td><td>Retrieve value by key</td></tr>
+            <tr><td><code>allKeys()</code></td><td><code>Set&lt;String&gt;</code></td><td>All keys in the dictionary</td></tr>
+            <tr><td><code>allKeysAndValues()</code></td><td><code>[String: ValueType]</code></td><td>Full materialization</td></tr>
+            <tr><td><code>sortedKeys(limit:after:)</code></td><td><code>[String]</code></td><td>Paginated sorted keys (cursor-based)</td></tr>
+            <tr><td><code>sortedKeysAndValues(limit:after:)</code></td><td><code>[(key, value)]</code></td><td>Paginated sorted entries</td></tr>
+            <tr><td><code>count</code></td><td><code>Int</code></td><td>Number of entries</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Radix Trie Internals</h3>
+    <p>Under the hood, the dictionary is a compressed radix trie (Patricia trie). Each <code>RadixNode</code> has:</p>
+    <ul>
+        <li><strong><code>prefix</code></strong>: the compressed edge label (path compression eliminates single-child chains)</li>
+        <li><strong><code>value</code></strong>: optional leaf value at this node</li>
+        <li><strong><code>children</code></strong>: <code>[Character: RadixHeader]</code> map to child nodes</li>
+    </ul>
+    <p>Each child is a <code>RadixHeader</code> — a content-addressed reference. Only the parts of the trie you access need to be loaded from storage.</p>
+
+    <h2 id="array">MerkleArray</h2>
+    <p>An ordered collection built on top of <code>MerkleDictionary</code>. Indices are 256-bit binary strings, giving deterministic ordering in the trie.</p>
+
+    <pre><code><span class="kw">var</span> arr = <span class="ty">MerkleArrayImpl</span>&lt;<span class="ty">String</span>&gt;()
+
+arr = arr.append(<span class="str">"first"</span>)
+arr = arr.append(<span class="str">"second"</span>)
+arr = arr.append(<span class="str">"third"</span>)
+
+arr.get(at: <span class="num">0</span>)  <span class="cm">// "first"</span>
+arr.first()     <span class="cm">// "first"</span>
+arr.last()      <span class="cm">// "third"</span>
+arr.count       <span class="cm">// 3</span></code></pre>
+
+    <h3>Methods</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>append(_:)</code></td><td>Add element at index <code>count</code></td></tr>
+            <tr><td><code>append(contentsOf:)</code></td><td>Concatenate another array</td></tr>
+            <tr><td><code>get(at:)</code></td><td>Retrieve element by index</td></tr>
+            <tr><td><code>first()</code>, <code>last()</code></td><td>Accessor shortcuts</td></tr>
+            <tr><td><code>mutating(at:value:)</code></td><td>Update element at index</td></tr>
+            <tr><td><code>deleting(at:)</code></td><td>Remove element (swaps with last for O(1))</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="set">MerkleSet</h2>
+    <p>A set backed by <code>MerkleDictionary</code> with empty string values. Supports full set algebra.</p>
+
+    <pre><code><span class="kw">var</span> set = <span class="ty">MerkleSetImpl</span>()
+set = set.insert(<span class="str">"alice"</span>)
+set = set.insert(<span class="str">"bob"</span>)
+
+set.contains(<span class="str">"alice"</span>)  <span class="cm">// true</span>
+set.members()          <span class="cm">// {"alice", "bob"}</span></code></pre>
+
+    <h3>Set Algebra</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>insert(_:)</code></td><td>Add member</td></tr>
+            <tr><td><code>remove(_:)</code></td><td>Remove member</td></tr>
+            <tr><td><code>contains(_:)</code></td><td>Membership test</td></tr>
+            <tr><td><code>union(_:)</code></td><td>Elements in either set</td></tr>
+            <tr><td><code>intersection(_:)</code></td><td>Elements in both sets</td></tr>
+            <tr><td><code>subtracting(_:)</code></td><td>Elements in self but not other</td></tr>
+            <tr><td><code>symmetricDifference(_:)</code></td><td>Elements in exactly one set</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="resolution">Lazy Resolution</h2>
+    <p>The key insight: a Merkle tree of millions of entries can be represented by a single root CID. You only load the branches you actually access. Resolution strategies control how deep to fetch:</p>
+
+    <pre><code><span class="kw">enum</span> <span class="ty">ResolutionStrategy</span> {
+    <span class="kw">case</span> targeted             <span class="cm">// fetch one header only</span>
+    <span class="kw">case</span> recursive             <span class="cm">// fetch entire subtree</span>
+    <span class="kw">case</span> list                  <span class="cm">// fetch trie structure, leave leaf values lazy</span>
+    <span class="kw">case</span> range(after:limit:)   <span class="cm">// sorted cursor-based range</span>
+}</code></pre>
+
+    <h3>Fetcher Protocol</h3>
+    <p>Implement this to connect Cashew to any storage backend — including an Acorn CAS chain:</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">Fetcher</span>: <span class="ty">Sendable</span> {
+    <span class="kw">func</span> <span class="fn">fetch</span>(rawCid: <span class="ty">String</span>) <span class="kw">async throws</span> -> <span class="ty">Data</span>
+}
+
+<span class="kw">public protocol</span> <span class="ty">Storer</span> {
+    <span class="kw">func</span> <span class="fn">store</span>(rawCid: <span class="ty">String</span>, data: <span class="ty">Data</span>) <span class="kw">throws</span>
+}</code></pre>
+
+    <div class="callout tip">
+        <div class="callout-title">Cashew + Acorn</div>
+        A <code>Fetcher</code> backed by an Acorn <code>CompositeCASWorker</code> gives you Merkle structures that lazily load from memory → disk → network. A <code>Storer</code> backed by the same chain persists mutations across all tiers.
+    </div>
+
+    <h3>Path-Based Resolution</h3>
+    <pre><code><span class="cm">// Only load the "alice" branch of a dictionary</span>
+<span class="kw">let</span> paths = <span class="ty">ArrayTrie</span>&lt;<span class="ty">ResolutionStrategy</span>&gt;()
+    .setting(path: [<span class="str">"alice"</span>], value: .targeted)
+
+<span class="kw">let</span> resolved = <span class="kw">try await</span> root.resolve(paths: paths, fetcher: fetcher)
+resolved.get(key: <span class="str">"alice"</span>) <span class="cm">// loaded</span>
+resolved.get(key: <span class="str">"bob"</span>)   <span class="cm">// still nil (not resolved)</span></code></pre>
+
+    <h2 id="encryption">Selective Encryption</h2>
+    <p>Encrypt specific subtrees while leaving others in plaintext. Different branches can use different keys.</p>
+
+    <pre><code><span class="kw">enum</span> <span class="ty">EncryptionStrategy</span> {
+    <span class="kw">case</span> targeted(<span class="ty">SymmetricKey</span>)   <span class="cm">// encrypt only this value</span>
+    <span class="kw">case</span> list(<span class="ty">SymmetricKey</span>)       <span class="cm">// encrypt trie structure (one level)</span>
+    <span class="kw">case</span> recursive(<span class="ty">SymmetricKey</span>)  <span class="cm">// encrypt entire subtree</span>
+}</code></pre>
+
+    <h3>EncryptionInfo</h3>
+    <pre><code><span class="kw">public struct</span> <span class="ty">EncryptionInfo</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> keyHash: <span class="ty">String</span>  <span class="cm">// SHA-256 of the key (for lookup)</span>
+    <span class="kw">public let</span> iv: <span class="ty">String</span>       <span class="cm">// base64 AES-GCM nonce</span>
+}</code></pre>
+
+    <p>Encrypted headers serialize as <code>"enc:keyHash:iv:cid"</code>. The <code>KeyProvider</code> protocol maps key hashes back to keys for decryption:</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">KeyProvider</span> {
+    <span class="kw">func</span> <span class="fn">key</span>(for keyHash: <span class="ty">String</span>) -> <span class="ty">SymmetricKey</span>?
+}</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">Path-based encryption</div>
+        You can encrypt <code>"accounts/alice/balance"</code> with Alice's key and <code>"accounts/bob/balance"</code> with Bob's key — all in the same tree. Nodes without encryption are publicly verifiable; encrypted nodes require the correct key to read but their CIDs remain valid for proof verification.
+    </div>
+
+    <h2 id="proofs">Sparse Merkle Proofs</h2>
+    <p>Generate minimal subtrees that prove specific facts about the data without revealing the entire structure.</p>
+
+    <pre><code><span class="kw">enum</span> <span class="ty">SparseMerkleProof</span> {
+    <span class="kw">case</span> insertion   <span class="cm">// prove key doesn't exist (safe to insert)</span>
+    <span class="kw">case</span> mutation    <span class="cm">// prove key exists (can be updated)</span>
+    <span class="kw">case</span> deletion    <span class="cm">// prove key exists with neighbors</span>
+    <span class="kw">case</span> existence   <span class="cm">// prove key exists</span>
+}</code></pre>
+
+    <h3>Example</h3>
+    <pre><code><span class="cm">// Prove that "alice" exists in the dictionary</span>
+<span class="kw">let</span> proofPaths = <span class="ty">ArrayTrie</span>&lt;<span class="ty">SparseMerkleProof</span>&gt;()
+    .setting(path: [<span class="str">"alice"</span>], value: .existence)
+
+<span class="kw">let</span> proof = <span class="kw">try await</span> root.proof(paths: proofPaths, fetcher: fetcher)
+<span class="cm">// `proof` is a minimal subtree containing only the nodes</span>
+<span class="cm">// needed to verify "alice" exists, with the same root CID</span></code></pre>
+
+    <p>A verifier can recompute the root CID from the proof subtree and compare it against the known root. If they match, the proof is valid. No trusted third party needed.</p>
+
+    <h2 id="diff">Diffing</h2>
+    <p>Compute the exact set of changes between two versions of a structure:</p>
+
+    <pre><code><span class="kw">let</span> changes = old.diff(from: new)
+
+changes.inserted   <span class="cm">// [key: value] of new entries</span>
+changes.deleted    <span class="cm">// [key: value] of removed entries</span>
+changes.modified   <span class="cm">// [key: ModifiedEntry] with old/new values</span>
+changes.changeCount</code></pre>
+
+    <h3>CashewDiff</h3>
+    <pre><code><span class="kw">public struct</span> <span class="ty">CashewDiff</span> {
+    <span class="kw">public var</span> inserted: [<span class="ty">String</span>: <span class="ty">String</span>]
+    <span class="kw">public var</span> deleted: [<span class="ty">String</span>: <span class="ty">String</span>]
+    <span class="kw">public var</span> modified: [<span class="ty">String</span>: <span class="ty">ModifiedEntry</span>]
+    <span class="kw">public var</span> changeCount: <span class="ty">Int</span>
+}
+
+<span class="kw">public struct</span> <span class="ty">ModifiedEntry</span> {
+    <span class="kw">public var</span> old: <span class="ty">String</span>
+    <span class="kw">public var</span> new: <span class="ty">String</span>
+    <span class="kw">public var</span> children: <span class="ty">CashewDiff</span>  <span class="cm">// recursive for nested structures</span>
+}</code></pre>
+
+    <p>Diffing is structural — it walks both tries simultaneously and only visits nodes whose CIDs differ. Identical subtrees are skipped entirely, making it efficient even for very large structures.</p>
+
+    <h2 id="query">Query Language</h2>
+    <p>Cashew includes a built-in query language for reading and mutating structures without writing Swift code:</p>
+
+    <pre><code><span class="cm">// Get a value</span>
+<span class="kw">let</span> (_, result) = <span class="kw">try</span> root.query(<span class="str">"get 'alice'"</span>)
+
+<span class="cm">// Pipeline: get alice's sub-dictionary, then get balance</span>
+<span class="kw">let</span> (_, result) = <span class="kw">try</span> root.query(<span class="str">"get 'alice' | get 'balance'"</span>)
+
+<span class="cm">// Mutations</span>
+<span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"insert 'carol' '500'"</span>)
+<span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"update 'alice' '300'"</span>)
+<span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"delete 'bob'"</span>)
+
+<span class="cm">// Enumeration</span>
+<span class="kw">let</span> (_, result) = <span class="kw">try</span> root.query(<span class="str">"keys"</span>)
+<span class="kw">let</span> (_, result) = <span class="kw">try</span> root.query(<span class="str">"count"</span>)</code></pre>
+
+    <h3>Expressions</h3>
+    <table>
+        <thead>
+            <tr><th>Expression</th><th>Result Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>get 'key'</code></td><td><code>.value</code></td><td>Retrieve value by key</td></tr>
+            <tr><td><code>get_at 0</code></td><td><code>.value</code></td><td>Retrieve array element by index</td></tr>
+            <tr><td><code>keys</code></td><td><code>.list</code></td><td>All keys</td></tr>
+            <tr><td><code>values</code></td><td><code>.list</code></td><td>All values</td></tr>
+            <tr><td><code>sorted_keys 10</code></td><td><code>.list</code></td><td>First 10 sorted keys</td></tr>
+            <tr><td><code>count</code></td><td><code>.count</code></td><td>Number of entries</td></tr>
+            <tr><td><code>contains 'key'</code></td><td><code>.bool</code></td><td>Membership test</td></tr>
+            <tr><td><code>first</code> / <code>last</code></td><td><code>.value</code></td><td>Array endpoints</td></tr>
+            <tr><td><code>insert 'k' 'v'</code></td><td><code>.ok</code></td><td>Insert key-value pair</td></tr>
+            <tr><td><code>update 'k' 'v'</code></td><td><code>.ok</code></td><td>Update existing key</td></tr>
+            <tr><td><code>delete 'k'</code></td><td><code>.ok</code></td><td>Remove key</td></tr>
+            <tr><td><code>append 'v'</code></td><td><code>.ok</code></td><td>Append to array</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Pipelines</h3>
+    <p>Chain expressions with <code>|</code> to traverse nested structures:</p>
+    <pre><code>get <span class="str">'accounts'</span> | get <span class="str">'alice'</span> | get <span class="str">'balance'</span></code></pre>
+
+    <h3>Query Plans</h3>
+    <p>For efficiency, queries can be compiled into a <code>CashewPlan</code> that batches transforms and pre-computes resolution paths:</p>
+    <pre><code><span class="kw">let</span> plan = <span class="ty">CashewPlan</span>.compile(expressions)
+<span class="kw">let</span> paths = plan.resolutionPaths() <span class="cm">// only fetch what's needed</span>
+<span class="kw">let</span> (newRoot, result) = <span class="kw">try await</span> root.execute(plan: plan, fetcher: fetcher)</code></pre>
+
+    <h2>Transforms</h2>
+    <p>For programmatic batch mutations, use <code>Transform</code> with an <code>ArrayTrie</code> to apply multiple changes in a single pass:</p>
+
+    <pre><code><span class="kw">enum</span> <span class="ty">Transform</span> {
+    <span class="kw">case</span> insert(<span class="ty">String</span>)   <span class="cm">// insert new value</span>
+    <span class="kw">case</span> update(<span class="ty">String</span>)   <span class="cm">// update existing value</span>
+    <span class="kw">case</span> delete            <span class="cm">// remove value</span>
+}</code></pre>
+
+    <pre><code><span class="kw">let</span> transforms = <span class="ty">ArrayTrie</span>&lt;<span class="ty">Transform</span>&gt;()
+    .setting(path: [<span class="str">"alice"</span>], value: .update(<span class="str">"300"</span>))
+    .setting(path: [<span class="str">"carol"</span>], value: .insert(<span class="str">"500"</span>))
+    .setting(path: [<span class="str">"bob"</span>], value: .delete)
+
+<span class="kw">let</span> newRoot = root.transform(transforms: transforms)</code></pre>
+
+    <h2>Dependencies</h2>
+    <table>
+        <thead>
+            <tr><th>Package</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>swift-crypto</code></td><td>SHA-256 hashing, AES-GCM encryption</td></tr>
+            <tr><td><code>swift-cid</code></td><td>IPFS CIDv1 content identifiers</td></tr>
+            <tr><td><code>swift-multicodec</code></td><td>Codec identifiers</td></tr>
+            <tr><td><code>swift-multihash</code></td><td>Self-describing hashes</td></tr>
+            <tr><td><code>swift-collections</code></td><td>Standard collection types</td></tr>
+            <tr><td><code>ArrayTrie</code></td><td>Path-based trie for resolution/transform/proof specs</td></tr>
+        </tbody>
+    </table>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

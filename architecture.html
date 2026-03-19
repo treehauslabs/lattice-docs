@@ -20,6 +20,7 @@
     <nav>
         <a href="index.html">Overview</a>
         <a href="architecture.html">Architecture</a>
+        <a href="cashew.html">Cashew</a>
         <a href="acorn.html">Acorn</a>
         <a href="tally.html">Tally</a>
         <a href="ivy.html">Ivy</a>
@@ -32,8 +33,10 @@
     <a href="architecture.html">Architecture</a>
     <a href="quickstart.html">Quick Start</a>
 
-    <div class="section-title">Core</div>
-    <a href="acorn.html">Acorn</a>
+    <div class="section-title">Data Structures</div>
+    <a href="cashew.html">Cashew</a>
+
+        <a href="acorn.html">Acorn</a>
     <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
     <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
     <a href="acorn.html#composite" class="nested">Composite Worker</a>
@@ -53,6 +56,34 @@
 <main class="main">
     <h1>Architecture</h1>
     <p class="subtitle">How the Lattice packages compose into a complete peer-to-peer content-addressable storage system.</p>
+
+    <h2>Cashew: The State Layer</h2>
+    <p>At the foundation of Lattice is <strong>Cashew</strong> — a library of Merkle data structures (dictionaries, arrays, sets) backed by a compressed radix trie. Every piece of state in the system is a Cashew structure, identified by the SHA-256 hash of its serialized form (CID).</p>
+
+    <div class="diagram">Application State
+    │
+    ▼
+┌───────────────────────────────────────────────┐
+│  Cashew: MerkleDictionary / MerkleArray / Set │
+│                                               │
+│  ┌─────────┐     ┌─────────┐     ┌─────────┐ │
+│  │RadixNode│────→│RadixNode│────→│  Scalar  │ │
+│  │ (CID₁)  │     │ (CID₂)  │     │ (CID₃)  │ │
+│  └─────────┘     └─────────┘     └─────────┘ │
+│                                               │
+│  Each node has a CID. Unresolved nodes hold   │
+│  only the CID — loaded lazily via Fetcher.    │
+└───────────────┬───────────────────────────────┘
+                │ Fetcher.fetch(rawCid:)
+                │ Storer.store(rawCid:, data:)
+                ▼
+┌───────────────────────────────────────────────┐
+│  Acorn CAS Chain (memory → disk → network)    │
+└───────────────────────────────────────────────┘</div>
+
+    <p>Cashew structures are <strong>immutable</strong> — every mutation returns a new root with a new CID. Previous versions remain valid. This enables versioning, efficient diffing (only walk nodes with different CIDs), and sparse proofs (include only the branch path needed to verify a claim).</p>
+
+    <p>The <code>Fetcher</code> and <code>Storer</code> protocols bridge Cashew to Acorn: a Fetcher backed by a <code>CompositeCASWorker</code> gives Merkle structures that lazily load from memory → disk → network. A Storer backed by the same chain persists mutations across all tiers.</p>
 
     <h2>The CAS Worker Chain</h2>
     <p>The central design pattern in Lattice is the <strong>worker chain</strong>. Each worker implements the <code>AcornCASWorker</code> protocol and holds optional <code>near</code> (faster) and <code>far</code> (slower) references to adjacent workers. The protocol's default <code>get()</code> walks the chain automatically:</p>

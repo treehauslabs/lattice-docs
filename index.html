@@ -29,6 +29,7 @@
     <nav>
         <a href="index.html">Overview</a>
         <a href="architecture.html">Architecture</a>
+        <a href="cashew.html">Cashew</a>
         <a href="acorn.html">Acorn</a>
         <a href="tally.html">Tally</a>
         <a href="ivy.html">Ivy</a>
@@ -41,8 +42,10 @@
     <a href="architecture.html">Architecture</a>
     <a href="quickstart.html">Quick Start</a>
 
-    <div class="section-title">Core</div>
-    <a href="acorn.html">Acorn</a>
+    <div class="section-title">Data Structures</div>
+    <a href="cashew.html">Cashew</a>
+
+        <a href="acorn.html">Acorn</a>
     <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
     <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
     <a href="acorn.html#composite" class="nested">Composite Worker</a>
@@ -100,6 +103,11 @@
         </thead>
         <tbody>
             <tr>
+                <td><a href="cashew.html"><strong>Cashew</strong></a></td>
+                <td>Merkle data structures. Dictionaries, arrays, and sets that are content-addressed, lazily loadable, selectively encryptable, diffable, and provable. The foundational state layer.</td>
+                <td><code>MerkleDictionary</code>, <code>MerkleArray</code>, <code>MerkleSet</code>, <code>Node</code>, <code>Header</code></td>
+            </tr>
+            <tr>
                 <td><a href="acorn.html"><strong>Acorn</strong></a></td>
                 <td>Core protocol and primitives. Defines the <code>AcornCASWorker</code> actor protocol, <code>ContentIdentifier</code>, and the composite chain.</td>
                 <td><code>AcornCASWorker</code>, <code>ContentIdentifier</code>, <code>CompositeCASWorker</code>, <code>LFUDecayCache</code></td>
@@ -129,6 +137,9 @@
 
     <h2>Design Principles</h2>
 
+    <h3>Merkle State</h3>
+    <p>All state is represented as Cashew Merkle structures — content-addressed trees where every node is identified by the hash of its contents. This makes state inherently versioned (every mutation produces a new root), verifiable (any node can be checked against its CID), and efficiently syncable (two nodes with the same CID are identical, no comparison needed).</p>
+
     <h3>Actor-Based Concurrency</h3>
     <p>Every storage worker is a Swift actor, providing compile-time data race safety. The <code>AcornCASWorker</code> protocol requires actor conformance, ensuring all implementations are thread-safe by construction.</p>
 
@@ -153,9 +164,11 @@
 │ MemWkr   │
 ├──────────┤
 │  Acorn   │ ─── swift-crypto
+├──────────┤
+│  Cashew  │ ─── swift-crypto, swift-cid, ArrayTrie
 └──────────┘</div>
 
-    <p>Arrows point downward: Ivy depends on Tally and Acorn. Tally depends on Acorn. Both storage workers depend only on Acorn. External dependencies are limited to <code>swift-crypto</code> (SHA-256) and <code>swift-nio</code> (TCP transport).</p>
+    <p>Cashew is the foundational data structure layer — it defines how state is structured as Merkle trees. Acorn provides the storage protocol for persisting Cashew's content-addressed nodes. The storage workers (memory, disk) implement that protocol. Tally adds reputation. Ivy adds networking. External dependencies are <code>swift-crypto</code> (SHA-256, AES-GCM), <code>swift-nio</code> (TCP), and IPFS multiformats (<code>swift-cid</code>, <code>swift-multihash</code>).</p>
 
     <h2>Platform Support</h2>
 
