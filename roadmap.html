@@ -262,63 +262,10 @@
             </div>
         </div>
 
-        <!-- Phase 2: Programmable State -->
+        <!-- Phase 2: Cross-Language SDKs -->
         <div class="phase next">
             <div class="phase-header">
-                <span class="phase-name">Phase 2 — Programmable State</span>
-                <span class="phase-tag planned">PLANNED</span>
-            </div>
-            <p class="phase-desc">Smart contracts that don't just store bytes — they operate on Merkle data structures natively. Contracts get dictionaries, arrays, and sets with built-in queries, pagination, proofs, and encryption. This is a fundamentally different programming model.</p>
-            <div class="phase-items">
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">Swift Contracts</span>
-                        <span class="item-desc">Write contracts in Swift. The language already has strict concurrency, value types, and Codable. Contract state is Cashew structures, not raw bytes</span>
-                    </div>
-                </div>
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">Native Merkle State</span>
-                        <span class="item-desc">Contract storage is <code>MerkleDictionary</code>, <code>MerkleArray</code>, <code>MerkleSet</code>. Built-in pagination, range queries, and sorted iteration — no custom indexing</span>
-                    </div>
-                </div>
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">State Access Metering</span>
-                        <span class="item-desc">Gas costs based on state access patterns, not opcode counting. Reading a single branch costs less than materializing an entire trie. Incentivizes lazy loading</span>
-                    </div>
-                </div>
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">Contract-Level Encryption</span>
-                        <span class="item-desc">Contracts can encrypt individual fields in their state using Cashew's selective encryption. Per-user privacy without ZK overhead</span>
-                    </div>
-                </div>
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">Structural Events</span>
-                        <span class="item-desc">No event logs needed. Cashew diffs between state versions give exact changesets. Subscribers know precisely what changed and why</span>
-                    </div>
-                </div>
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">Contract Testing Framework</span>
-                        <span class="item-desc"><code>lattice test</code> runs contracts against a simulated chain with snapshot/revert, time travel, and assertion helpers</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Phase 3: Cross-Language SDKs -->
-        <div class="phase next">
-            <div class="phase-header">
-                <span class="phase-name">Phase 3 — Cross-Language SDKs</span>
+                <span class="phase-name">Phase 2 — Cross-Language SDKs</span>
                 <span class="phase-tag planned">PLANNED</span>
             </div>
             <p class="phase-desc">Lattice should be accessible from any language. The protocol is simple enough that a full client SDK is hundreds, not thousands, of lines.</p>
@@ -354,10 +301,10 @@
             </div>
         </div>
 
-        <!-- Phase 4: Light Clients & Mobile -->
+        <!-- Phase 3: Light Clients & Mobile -->
         <div class="phase future">
             <div class="phase-header">
-                <span class="phase-name">Phase 4 — Light Clients &amp; Mobile</span>
+                <span class="phase-name">Phase 3 — Light Clients &amp; Mobile</span>
                 <span class="phase-tag future-tag">FUTURE</span>
             </div>
             <p class="phase-desc">Every phone is a node. Lattice's lazy state loading makes light clients genuinely lightweight — download roots, verify proofs, load branches on demand.</p>
@@ -393,10 +340,10 @@
             </div>
         </div>
 
-        <!-- Phase 5: Advanced Cryptography -->
+        <!-- Phase 4: Advanced Cryptography -->
         <div class="phase future">
             <div class="phase-header">
-                <span class="phase-name">Phase 5 — Advanced Cryptography</span>
+                <span class="phase-name">Phase 4 — Advanced Cryptography</span>
                 <span class="phase-tag future-tag">FUTURE</span>
             </div>
             <p class="phase-desc">Layer zero-knowledge proofs on top of Cashew's existing Merkle infrastructure. Prove state claims without revealing state. Verify chains without replaying history.</p>
@@ -432,10 +379,10 @@
             </div>
         </div>
 
-        <!-- Phase 6: Ecosystem -->
+        <!-- Phase 5: Ecosystem -->
         <div class="phase future">
             <div class="phase-header">
-                <span class="phase-name">Phase 6 — Ecosystem &amp; Governance</span>
+                <span class="phase-name">Phase 5 — Ecosystem &amp; Governance</span>
                 <span class="phase-tag future-tag">FUTURE</span>
             </div>
             <p class="phase-desc">A self-sustaining ecosystem where the community governs protocol evolution, standards emerge organically, and builders have the resources they need.</p>
@@ -551,46 +498,46 @@
                 <td class="lattice-col"><span class="check">Swift actors (compile-time safe)</span></td>
             </tr>
             <tr>
-                <td>Smart contracts</td>
+                <td>Application logic</td>
                 <td>Solidity / EVM</td>
                 <td>Rust / BPF</td>
                 <td>CosmWasm / Go</td>
-                <td class="lattice-col"><span class="partial">Phase 2: Swift + Merkle state</span></td>
+                <td class="lattice-col"><span class="check">Client-side apps + state transactions</span></td>
             </tr>
             <tr>
                 <td>Multi-language SDKs</td>
                 <td>JS, Go, Rust, Python</td>
                 <td>JS, Rust, Python</td>
                 <td>Go, JS, Rust</td>
-                <td class="lattice-col"><span class="partial">Phase 3: TS, Python, Go</span></td>
+                <td class="lattice-col"><span class="partial">Phase 2: TS, Python, Go</span></td>
             </tr>
         </tbody>
     </table>
 
-    <h2>The Smart Contract Thesis</h2>
+    <h2>The Application Model</h2>
 
-    <p>Phase 2 is the inflection point. Here's why Lattice's approach to programmable state is fundamentally different.</p>
+    <p>Lattice doesn't encode smart contracts in the blockchain. Application logic lives in client-side apps that read and update state through blockchain transactions.</p>
 
-    <h3>Traditional: State as Bytes</h3>
-    <p>On Ethereum, contract storage is a flat mapping from 256-bit keys to 256-bit values. Need a list? Manually manage an array layout. Need pagination? Write a custom cursor. Need a proof that a key exists? Generate an MPT proof (expensive, ~3KB). Need to know what changed? Emit event logs and run an indexer. Need privacy? Deploy on a separate L2.</p>
+    <h3>Traditional: Logic On-Chain</h3>
+    <p>On Ethereum, application logic runs inside the EVM. Every node re-executes every contract call. This creates a global computer, but one that's slow, expensive, and constrained by gas limits. The chain stores both state and the code that mutates it.</p>
 
-    <h3>Lattice: State as Data Structures</h3>
-    <p>On Lattice, contract storage <em>is</em> Cashew. You don't store bytes — you store dictionaries, arrays, and sets that come with:</p>
+    <h3>Lattice: Logic Client-Side, State On-Chain</h3>
+    <p>On Lattice, the blockchain is a verified state layer. Applications define their logic client-side and submit transactions that read and write Cashew Merkle state. The chain guarantees state integrity, ordering, and cross-chain verifiability. Applications get:</p>
 
     <ul>
-        <li><strong>Built-in pagination</strong> — <code>sortedKeys(limit: 20, after: cursor)</code>. No custom indexing.</li>
-        <li><strong>Sparse proofs</strong> — prove any claim about your contract state in bytes, not kilobytes.</li>
-        <li><strong>Structural diffs</strong> — subscribers get exact changesets between state versions. No event logs needed.</li>
-        <li><strong>Selective encryption</strong> — encrypt individual fields. Alice's data is private; Bob's is public. Same contract.</li>
-        <li><strong>Lazy loading</strong> — contracts only load the state branches they actually touch. Gas reflects this.</li>
-        <li><strong>Query language</strong> — <code>get 'accounts' | get 'alice' | get 'balance'</code> works on-chain.</li>
+        <li><strong>Rich state structures</strong> — state is Cashew dictionaries, arrays, and sets with built-in pagination, queries, and sorted iteration.</li>
+        <li><strong>Sparse proofs</strong> — prove any claim about state in bytes, not kilobytes. Clients verify without trusting the server.</li>
+        <li><strong>Structural diffs</strong> — subscribe to state roots and get exact changesets between versions. No event logs or indexers needed.</li>
+        <li><strong>Selective encryption</strong> — encrypt individual fields. Alice's data is private; Bob's is public. Same state tree.</li>
+        <li><strong>Lazy loading</strong> — clients only fetch the state branches they need. A wallet loading one account doesn't download the entire trie.</li>
+        <li><strong>Cross-chain reads</strong> — read and verify state from any chain in the hierarchy via Merkle proofs against parent roots.</li>
     </ul>
 
-    <p>This isn't a marginal improvement. It's a different category. The things other chains need external infrastructure for — indexing, proving, paginating, privacy — are properties of the state itself on Lattice.</p>
+    <p>This separates concerns cleanly: the chain handles state integrity and consensus; applications handle business logic. The result is a simpler protocol, faster iteration on application logic (no redeployment to a chain), and state that's inherently verifiable.</p>
 
     <div class="callout tip">
         <div class="callout-title">What this enables</div>
-        <p>A DEX on Lattice can offer provable order book state, paginated history queries, per-user encrypted positions, and real-time structural diffs to frontends — all without The Graph, a custom indexer, or a privacy L2. The data structures do the work.</p>
+        <p>A DEX built on Lattice defines its matching engine client-side and writes order book state through transactions. Any client can independently verify order book state via Merkle proofs, subscribe to structural diffs for real-time updates, and read cross-chain balances — all without The Graph, a custom indexer, or a separate trust layer.</p>
     </div>
 </main>
 
