@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadmap — Lattice Docs</title>
+    <meta name="description" content="Lattice development roadmap: from protocol foundation to the most developer-friendly blockchain in existence.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
+    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
+    <a href="acorn.html#composite" class="nested">Composite Worker</a>
+    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="memory-worker.html#sync-api" class="nested">Sync API</a>
+    <a href="memory-worker.html#async-api" class="nested">Async API</a>
+    <a href="disk-worker.html">Disk Worker</a>
+    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
+    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+    <a href="tally.html#peer-ledger" class="nested">Peer Ledger</a>
+    <a href="tally.html#reputation" class="nested">Reputation Scoring</a>
+    <a href="tally.html#rate-pressure" class="nested">Rate Pressure</a>
+    <a href="tally.html#challenges" class="nested">Proof-of-Work</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+    <a href="ivy.html#connections" class="nested">Connections</a>
+    <a href="ivy.html#router" class="nested">DHT Router</a>
+    <a href="ivy.html#messages" class="nested">Wire Protocol</a>
+    <a href="ivy.html#network-worker" class="nested">Network Worker</a>
+</aside>
+
+<main class="main">
+    <h1>Roadmap</h1>
+    <p class="subtitle">From protocol foundation to the most developer-friendly blockchain in existence. Not by adding features other chains have — by making Lattice's structural advantages accessible.</p>
+
+    <div class="vision-banner">
+        <p>Most blockchains store state as flat key-value bytes. Developers bolt on indexers, provers, and bridges after the fact. <strong>Lattice is different.</strong> State is Merkle data structures with built-in queries, pagination, proofs, encryption, and diffing. Multi-chain scaling doesn't sacrifice security. Cross-chain transfers need no bridges. The roadmap isn't about building these capabilities — they already exist. It's about making them trivially easy to use.</p>
+    </div>
+
+    <h2>Why Lattice is Structurally Different</h2>
+    <p>These aren't roadmap items. They're already true — consequences of the architecture.</p>
+
+    <div class="diff-grid">
+        <div class="diff-card">
+            <h3>
+                <span class="d-icon" style="background: var(--purple-glow); color: var(--purple);">&#x29EB;</span>
+                State proofs are free
+            </h3>
+            <p>All state is Cashew Merkle trees. Any claim about any state — "Alice's balance at block 50,000 was 1,000" — can be proven with a sparse proof of a few hundred bytes, regardless of total state size. No special prover circuits, no trusted setup.</p>
+            <div class="compare">Others: Ethereum requires MPT proofs ~3KB; Solana has no native state proofs</div>
+        </div>
+        <div class="diff-card">
+            <h3>
+                <span class="d-icon" style="background: var(--cyan-glow); color: var(--cyan);">&#x29BF;</span>
+                Multi-chain without splitting security
+            </h3>
+            <p>Merged mining means one proof of work secures unlimited child chains. Adding a chain adds throughput without dividing hashrate. This isn't a shard, rollup, or sidechain with separate validators — it's structural.</p>
+            <div class="compare">Others: Cosmos zones have independent validator sets; Ethereum L2s rely on fraud/validity proofs</div>
+        </div>
+        <div class="diff-card">
+            <h3>
+                <span class="d-icon" style="background: var(--green-glow); color: var(--green);">&#x29C1;</span>
+                Granular privacy without ZK
+            </h3>
+            <p>Cashew's selective encryption lets you encrypt individual fields in state. Alice's balance encrypted, Bob's public, same tree, same contract. CIDs remain valid for proof verification even when data is encrypted.</p>
+            <div class="compare">Others: Zcash/Aztec require ZK circuits; Ethereum has no native field-level privacy</div>
+        </div>
+        <div class="diff-card">
+            <h3>
+                <span class="d-icon" style="background: rgba(251,191,36,0.12); color: var(--amber);">&#x29C8;</span>
+                Indexing is structural
+            </h3>
+            <p>Cashew's diffing computes exact changesets between any two state versions. Subscribe to a root CID, diff against the previous version, get precisely what changed. No external indexer, no event logs, no subgraph.</p>
+            <div class="compare">Others: Ethereum needs The Graph; Solana needs Geyser plugins; all need custom indexers</div>
+        </div>
+        <div class="diff-card">
+            <h3>
+                <span class="d-icon" style="background: var(--cyan-glow); color: var(--cyan);">&#x2941;</span>
+                Cross-chain without bridges
+            </h3>
+            <p>Parent blocks structurally contain child blocks. Cross-chain transfers are verified by Merkle proof against the parent state root — directly, trustlessly. No multisig bridge, no oracle, no escape hatch risk.</p>
+            <div class="compare">Others: Cosmos IBC needs relayers; Ethereum bridges are the #1 hack vector ($2B+ lost)</div>
+        </div>
+        <div class="diff-card">
+            <h3>
+                <span class="d-icon" style="background: var(--green-glow); color: var(--green);">&#x2B21;</span>
+                State syncing is lazy
+            </h3>
+            <p>A new node downloads the state root and lazily loads branches on demand. Access a single account? Load a single branch path. The full trie never needs to be materialized until it's needed.</p>
+            <div class="compare">Others: Ethereum full sync downloads ~1TB; Solana snapshots are ~100GB+</div>
+        </div>
+    </div>
+
+    <h2 id="timeline">Development Timeline</h2>
+
+    <div class="phase-timeline">
+
+        <!-- Phase 0: Foundation -->
+        <div class="phase current">
+            <div class="phase-header">
+                <span class="phase-name">Phase 0 — Foundation</span>
+                <span class="phase-tag active">SHIPPED</span>
+            </div>
+            <p class="phase-desc">The core protocol stack. Seven Swift packages that compose into a complete peer-to-peer blockchain with Merkle state, tiered CAS, reputation gating, and Kademlia networking.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Cashew Merkle Structures</span>
+                        <span class="item-desc">Dictionaries, arrays, sets with lazy loading, encryption, proofs, diffing, and query language</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Acorn CAS Protocol</span>
+                        <span class="item-desc">Actor-based content-addressed storage with worker chaining and LFU decay eviction</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Memory &amp; Disk Workers</span>
+                        <span class="item-desc">~10ns sync reads (memory), Bloom filter fast rejection (disk), SHA-256 integrity verification</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Tally Reputation System</span>
+                        <span class="item-desc">Reciprocity scoring, latency EWMA, rate pressure gating, PoW challenges for Sybil resistance</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Ivy P2P Networking</span>
+                        <span class="item-desc">Kademlia DHT, swift-nio TCP, 8-type wire protocol, local discovery, content routing</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Lattice Blockchain</span>
+                        <span class="item-desc">Hierarchical PoW, merged mining, cross-chain transfers, parent-anchored fork choice, mempool</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">Cross-Platform</span>
+                        <span class="item-desc">macOS, iOS, tvOS, watchOS, visionOS, and Linux. Swift 6 strict concurrency throughout</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x2713;</span>
+                    <div class="item-text">
+                        <span class="item-title">IPFS CID Compatibility</span>
+                        <span class="item-desc">CIDv1 content identifiers, multicodec, multihash — interoperable with the IPFS ecosystem</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 1: Developer Experience -->
+        <div class="phase next">
+            <div class="phase-header">
+                <span class="phase-name">Phase 1 — Developer Experience</span>
+                <span class="phase-tag planned">IN PROGRESS</span>
+            </div>
+            <p class="phase-desc">Make it trivially easy to build on Lattice. A developer should go from zero to running chain in under five minutes, with tooling that feels as good as Foundry or Cargo.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status wip">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title"><code>lattice</code> CLI</span>
+                        <span class="item-desc">Init, build, run, deploy, query. One binary, batteries included. <code>lattice init my-chain</code> scaffolds a full project</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status wip">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Local Devnet</span>
+                        <span class="item-desc"><code>lattice devnet</code> spins up a local chain with auto-mining, funded accounts, and RPC endpoint in one command</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Block Explorer</span>
+                        <span class="item-desc">Web-based explorer for local and remote chains. Browse blocks, transactions, accounts, and state trees visually</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Project Templates</span>
+                        <span class="item-desc">Starter templates: basic chain, token chain, state-heavy app, multi-chain setup. <code>lattice init --template token</code></span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Interactive Tutorials</span>
+                        <span class="item-desc">Step-by-step guides: your first chain, your first child chain, cross-chain transfer, encrypted state</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">RPC / REST Gateway</span>
+                        <span class="item-desc">HTTP API for querying chain state, submitting transactions, and subscribing to events. JSON-RPC compatible</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 2: Programmable State -->
+        <div class="phase next">
+            <div class="phase-header">
+                <span class="phase-name">Phase 2 — Programmable State</span>
+                <span class="phase-tag planned">PLANNED</span>
+            </div>
+            <p class="phase-desc">Smart contracts that don't just store bytes — they operate on Merkle data structures natively. Contracts get dictionaries, arrays, and sets with built-in queries, pagination, proofs, and encryption. This is a fundamentally different programming model.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Swift Contracts</span>
+                        <span class="item-desc">Write contracts in Swift. The language already has strict concurrency, value types, and Codable. Contract state is Cashew structures, not raw bytes</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Native Merkle State</span>
+                        <span class="item-desc">Contract storage is <code>MerkleDictionary</code>, <code>MerkleArray</code>, <code>MerkleSet</code>. Built-in pagination, range queries, and sorted iteration — no custom indexing</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">State Access Metering</span>
+                        <span class="item-desc">Gas costs based on state access patterns, not opcode counting. Reading a single branch costs less than materializing an entire trie. Incentivizes lazy loading</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Contract-Level Encryption</span>
+                        <span class="item-desc">Contracts can encrypt individual fields in their state using Cashew's selective encryption. Per-user privacy without ZK overhead</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Structural Events</span>
+                        <span class="item-desc">No event logs needed. Cashew diffs between state versions give exact changesets. Subscribers know precisely what changed and why</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Contract Testing Framework</span>
+                        <span class="item-desc"><code>lattice test</code> runs contracts against a simulated chain with snapshot/revert, time travel, and assertion helpers</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 3: Cross-Language SDKs -->
+        <div class="phase next">
+            <div class="phase-header">
+                <span class="phase-name">Phase 3 — Cross-Language SDKs</span>
+                <span class="phase-tag planned">PLANNED</span>
+            </div>
+            <p class="phase-desc">Lattice should be accessible from any language. The protocol is simple enough that a full client SDK is hundreds, not thousands, of lines.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">TypeScript / JavaScript SDK</span>
+                        <span class="item-desc">Full client: key management, transaction building, state queries, CID computation. Works in Node.js and browsers</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Python SDK</span>
+                        <span class="item-desc">Data science and scripting friendly. Query state, analyze chain history, build transactions programmatically</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Go SDK</span>
+                        <span class="item-desc">For infrastructure builders. Full node capabilities, high-throughput transaction submission, state streaming</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">WASM Contract Support</span>
+                        <span class="item-desc">Compile contracts from Rust, Go, or C to WebAssembly. Same Merkle state model, any source language</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 4: Light Clients & Mobile -->
+        <div class="phase future">
+            <div class="phase-header">
+                <span class="phase-name">Phase 4 — Light Clients &amp; Mobile</span>
+                <span class="phase-tag future-tag">FUTURE</span>
+            </div>
+            <p class="phase-desc">Every phone is a node. Lattice's lazy state loading makes light clients genuinely lightweight — download roots, verify proofs, load branches on demand.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">SPV Light Client Protocol</span>
+                        <span class="item-desc">Verify transactions and state claims without downloading the full chain. Block headers + Cashew sparse proofs</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">iOS / macOS Wallet Framework</span>
+                        <span class="item-desc">Native SwiftUI wallet SDK. Key management via Secure Enclave, transaction signing, state browsing</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Browser Light Client</span>
+                        <span class="item-desc">Lattice compiled to WebAssembly. Full verification in the browser — no RPC trust assumptions</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">React Native SDK</span>
+                        <span class="item-desc">Cross-platform mobile development. Bridged from the Swift SDK with native performance</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 5: Advanced Cryptography -->
+        <div class="phase future">
+            <div class="phase-header">
+                <span class="phase-name">Phase 5 — Advanced Cryptography</span>
+                <span class="phase-tag future-tag">FUTURE</span>
+            </div>
+            <p class="phase-desc">Layer zero-knowledge proofs on top of Cashew's existing Merkle infrastructure. Prove state claims without revealing state. Verify chains without replaying history.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">ZK State Proofs</span>
+                        <span class="item-desc">Prove "I have balance > X" without revealing the balance. Cashew proofs provide the Merkle path; ZK wraps the claim</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Recursive Verification</span>
+                        <span class="item-desc">Verify an entire child chain's history with a single proof. Compress thousands of blocks into one verifiable statement</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Private Transactions</span>
+                        <span class="item-desc">Combine Cashew's selective encryption with ZK proofs: encrypted state that validators can verify without decrypting</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Threshold Signatures</span>
+                        <span class="item-desc">N-of-M signing for multisig wallets, DAO treasuries, and cross-chain validator sets</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phase 6: Ecosystem -->
+        <div class="phase future">
+            <div class="phase-header">
+                <span class="phase-name">Phase 6 — Ecosystem &amp; Governance</span>
+                <span class="phase-tag future-tag">FUTURE</span>
+            </div>
+            <p class="phase-desc">A self-sustaining ecosystem where the community governs protocol evolution, standards emerge organically, and builders have the resources they need.</p>
+            <div class="phase-items">
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">On-Chain Governance</span>
+                        <span class="item-desc">ChainSpec amendments via on-chain voting. Propose, debate, and ratify protocol changes — all on Lattice state</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Token Standards</span>
+                        <span class="item-desc">Lattice equivalents of ERC-20 (fungible), ERC-721 (NFT), and ERC-1155 (multi-token). Native Merkle state makes them efficient</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">IPFS Gateway</span>
+                        <span class="item-desc">Bidirectional bridge between Lattice CAS and IPFS. Pin Lattice state to IPFS; import IPFS content into Lattice</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Decentralized Identity</span>
+                        <span class="item-desc">DID documents stored as Cashew structures. Verifiable credentials with Merkle proofs. Self-sovereign identity on Lattice state</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Ethereum State Anchoring</span>
+                        <span class="item-desc">Periodically anchor Lattice state roots to Ethereum for additional finality guarantees and cross-ecosystem composability</span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status planned">&#x25CB;</span>
+                    <div class="item-text">
+                        <span class="item-title">Grant Program</span>
+                        <span class="item-desc">Fund builders, researchers, and educators. Bounties for tooling, audits, and integrations</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <h2>Comparison</h2>
+    <p>How Lattice's architecture compares to existing chains on developer-critical features.</p>
+
+    <table class="vs-table">
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>Ethereum</th>
+                <th>Solana</th>
+                <th>Cosmos</th>
+                <th class="lattice-col">Lattice</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>State proofs</td>
+                <td>MPT proofs (~3KB)</td>
+                <td><span class="cross">None native</span></td>
+                <td>IAVL proofs</td>
+                <td class="lattice-col"><span class="check">Cashew sparse proofs (bytes)</span></td>
+            </tr>
+            <tr>
+                <td>Multi-chain security</td>
+                <td>L2 fraud/validity proofs</td>
+                <td><span class="cross">Single chain</span></td>
+                <td>Independent validators</td>
+                <td class="lattice-col"><span class="check">Merged mining (shared PoW)</span></td>
+            </tr>
+            <tr>
+                <td>Cross-chain transfers</td>
+                <td>Bridge contracts</td>
+                <td><span class="cross">Wormhole (bridge)</span></td>
+                <td>IBC relayers</td>
+                <td class="lattice-col"><span class="check">Structural Merkle proofs</span></td>
+            </tr>
+            <tr>
+                <td>Field-level privacy</td>
+                <td><span class="cross">None (needs L2)</span></td>
+                <td><span class="cross">None</span></td>
+                <td><span class="cross">None</span></td>
+                <td class="lattice-col"><span class="check">Selective encryption per field</span></td>
+            </tr>
+            <tr>
+                <td>State diffing</td>
+                <td>Event logs + indexer</td>
+                <td>Geyser plugins</td>
+                <td>Event logs</td>
+                <td class="lattice-col"><span class="check">Structural Merkle diffs</span></td>
+            </tr>
+            <tr>
+                <td>State syncing</td>
+                <td>~1TB full sync</td>
+                <td>~100GB+ snapshots</td>
+                <td>State sync module</td>
+                <td class="lattice-col"><span class="check">Lazy branch-level loading</span></td>
+            </tr>
+            <tr>
+                <td>Concurrency model</td>
+                <td>Single-threaded EVM</td>
+                <td>Parallel (Sealevel)</td>
+                <td>Single-threaded</td>
+                <td class="lattice-col"><span class="check">Swift actors (compile-time safe)</span></td>
+            </tr>
+            <tr>
+                <td>Smart contracts</td>
+                <td>Solidity / EVM</td>
+                <td>Rust / BPF</td>
+                <td>CosmWasm / Go</td>
+                <td class="lattice-col"><span class="partial">Phase 2: Swift + Merkle state</span></td>
+            </tr>
+            <tr>
+                <td>Multi-language SDKs</td>
+                <td>JS, Go, Rust, Python</td>
+                <td>JS, Rust, Python</td>
+                <td>Go, JS, Rust</td>
+                <td class="lattice-col"><span class="partial">Phase 3: TS, Python, Go</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>The Smart Contract Thesis</h2>
+
+    <p>Phase 2 is the inflection point. Here's why Lattice's approach to programmable state is fundamentally different.</p>
+
+    <h3>Traditional: State as Bytes</h3>
+    <p>On Ethereum, contract storage is a flat mapping from 256-bit keys to 256-bit values. Need a list? Manually manage an array layout. Need pagination? Write a custom cursor. Need a proof that a key exists? Generate an MPT proof (expensive, ~3KB). Need to know what changed? Emit event logs and run an indexer. Need privacy? Deploy on a separate L2.</p>
+
+    <h3>Lattice: State as Data Structures</h3>
+    <p>On Lattice, contract storage <em>is</em> Cashew. You don't store bytes — you store dictionaries, arrays, and sets that come with:</p>
+
+    <ul>
+        <li><strong>Built-in pagination</strong> — <code>sortedKeys(limit: 20, after: cursor)</code>. No custom indexing.</li>
+        <li><strong>Sparse proofs</strong> — prove any claim about your contract state in bytes, not kilobytes.</li>
+        <li><strong>Structural diffs</strong> — subscribers get exact changesets between state versions. No event logs needed.</li>
+        <li><strong>Selective encryption</strong> — encrypt individual fields. Alice's data is private; Bob's is public. Same contract.</li>
+        <li><strong>Lazy loading</strong> — contracts only load the state branches they actually touch. Gas reflects this.</li>
+        <li><strong>Query language</strong> — <code>get 'accounts' | get 'alice' | get 'balance'</code> works on-chain.</li>
+    </ul>
+
+    <p>This isn't a marginal improvement. It's a different category. The things other chains need external infrastructure for — indexing, proving, paginating, privacy — are properties of the state itself on Lattice.</p>
+
+    <div class="callout tip">
+        <div class="callout-title">What this enables</div>
+        <p>A DEX on Lattice can offer provable order book state, paginated history queries, per-user encrypted positions, and real-time structural diffs to frontends — all without The Graph, a custom indexer, or a privacy L2. The data structures do the work.</p>
+    </div>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

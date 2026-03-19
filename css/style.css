@@ -586,6 +586,231 @@ tr:hover td { background: rgba(255,255,255,0.015); }
     margin: 0; line-height: 1.55;
 }
 
+/* ══════════════════════════════════════════
+   ROADMAP PAGE — roadmap.html specific
+   ══════════════════════════════════════════ */
+
+/* Vision banner */
+.vision-banner {
+    background: linear-gradient(135deg, rgba(34,211,238,0.06) 0%, rgba(167,139,250,0.06) 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    margin: 0 0 48px;
+}
+
+.vision-banner p {
+    font-size: 17px;
+    line-height: 1.7;
+    color: var(--text);
+    margin: 0;
+    max-width: 680px;
+}
+
+.vision-banner p strong { color: var(--cyan); font-weight: 700; }
+
+/* Differentiator grid */
+.diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0 40px;
+}
+
+.diff-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 12px;
+    padding: 22px 24px;
+}
+
+.diff-card h3 {
+    font-size: 15px;
+    margin: 0 0 8px;
+    display: flex; align-items: center; gap: 10px;
+}
+
+.diff-card h3 .d-icon {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+}
+
+.diff-card p {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    margin: 0;
+    line-height: 1.55;
+}
+
+.diff-card .compare {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    opacity: 0.7;
+}
+
+/* Phase timeline */
+.phase-timeline {
+    position: relative;
+    padding-left: 32px;
+    margin: 32px 0 48px;
+}
+
+.phase-timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px; top: 8px; bottom: 8px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--cyan) 0%, var(--purple) 50%, var(--green) 100%);
+    opacity: 0.3;
+    border-radius: 2px;
+}
+
+.phase {
+    position: relative;
+    margin-bottom: 40px;
+}
+
+.phase:last-child { margin-bottom: 0; }
+
+.phase::before {
+    content: '';
+    position: absolute;
+    left: -28px; top: 6px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: var(--bg);
+}
+
+.phase.current::before {
+    border-color: var(--cyan);
+    background: var(--cyan);
+    box-shadow: 0 0 12px rgba(34,211,238,0.4);
+}
+
+.phase.next::before { border-color: var(--purple); }
+.phase.future::before { border-color: var(--text-dim); opacity: 0.5; }
+
+.phase-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.phase-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: -0.02em;
+}
+
+.phase-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+}
+
+.phase-tag.active {
+    background: var(--cyan-glow);
+    color: var(--cyan);
+}
+
+.phase-tag.planned {
+    background: var(--purple-glow);
+    color: var(--purple);
+}
+
+.phase-tag.future-tag {
+    background: rgba(255,255,255,0.04);
+    color: var(--text-dim);
+}
+
+.phase-desc {
+    font-size: 15px;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+    line-height: 1.6;
+}
+
+.phase-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.phase-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dim);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13.5px;
+    color: var(--text);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.phase-item .item-status {
+    flex-shrink: 0;
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+    margin-top: 1px;
+}
+
+.phase-item .item-status.done {
+    background: var(--green-glow); color: var(--green);
+}
+
+.phase-item .item-status.wip {
+    background: var(--cyan-glow); color: var(--cyan);
+}
+
+.phase-item .item-status.planned {
+    background: rgba(255,255,255,0.04); color: var(--text-dim);
+}
+
+.phase-item .item-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.phase-item .item-title {
+    font-weight: 600;
+    color: var(--text-bright);
+    font-size: 13.5px;
+}
+
+.phase-item .item-desc {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    line-height: 1.45;
+}
+
+/* Comparison table enhancements */
+.vs-table td:first-child {
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.vs-table .lattice-col {
+    background: rgba(34,211,238,0.04);
+}
+
+.vs-table .check { color: var(--green); }
+.vs-table .cross { color: var(--red); opacity: 0.6; }
+.vs-table .partial { color: var(--amber); }
+
 /* ── FOOTER ── */
 .site-footer {
     margin-left: var(--sidebar-w);
@@ -622,4 +847,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
     .pkg-grid { grid-template-columns: 1fr; }
     .principles { grid-template-columns: 1fr; }
     .stats-strip { gap: 24px; }
+    .diff-grid { grid-template-columns: 1fr; }
+    .phase-items { grid-template-columns: 1fr; }
+    .phase-name { font-size: 17px; }
 }
