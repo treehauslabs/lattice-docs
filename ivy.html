@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ivy — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+    <a href="ivy.html#connections" class="nested">Connections</a>
+    <a href="ivy.html#router" class="nested">DHT Router</a>
+    <a href="ivy.html#messages" class="nested">Wire Protocol</a>
+    <a href="ivy.html#network-worker" class="nested">Network Worker</a>
+</aside>
+
+<main class="main">
+    <h1>Ivy <span class="pkg-badge net">Networking</span></h1>
+    <p class="subtitle">Peer-to-peer networking layer. Kademlia DHT routing, TCP transport via swift-nio, reputation-weighted content routing, and local peer discovery.</p>
+
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Ivy.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+
+    <h2>Ivy Actor</h2>
+    <p><span class="badge actor">actor</span></p>
+    <p>The main node. Manages connections, routes content requests, and maintains the DHT.</p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">Ivy</span> {
+    <span class="kw">public let</span> config: <span class="ty">IvyConfig</span>
+    <span class="kw">public let</span> tally: <span class="ty">Tally</span>
+    <span class="kw">public let</span> router: <span class="ty">Router</span>
+    <span class="kw">public let</span> localID: <span class="ty">PeerID</span>
+    <span class="kw">public let</span> group: <span class="ty">EventLoopGroup</span>
+    <span class="kw">public weak var</span> delegate: <span class="ty">IvyDelegate</span>?
+
+    <span class="kw">public init</span>(
+        config: <span class="ty">IvyConfig</span>,
+        group: <span class="ty">EventLoopGroup</span> = <span class="ty">MultiThreadedEventLoopGroup</span>.singleton
+    )
+}</code></pre>
+
+    <h3>Lifecycle</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>start()</code> <span class="badge async">async throws</span></td>
+                <td>Start TCP listener, local discovery (if enabled), and connect to bootstrap peers.</td>
+            </tr>
+            <tr>
+                <td><code>stop()</code> <span class="badge async">async</span></td>
+                <td>Close server, stop discovery, disconnect all peers.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Peer Management</h3>
+    <table>
+        <thead>
+            <tr><th>Method / Property</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>connect(to:)</code> <span class="badge async">async throws</span></td><td>Dial a peer by endpoint. Adds to router and starts message handler.</td></tr>
+            <tr><td><code>disconnect(_:)</code></td><td>Close connection and remove peer.</td></tr>
+            <tr><td><code>connectedPeers</code></td><td>Array of currently connected <code>PeerID</code>s.</td></tr>
+            <tr><td><code>worker()</code></td><td>Get the <code>NetworkCASWorker</code> for this node.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Content Operations</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>announceBlock(cid:)</code> <span class="badge async">async</span></td>
+                <td>Tell all connected peers you have a block. Respects Tally gating.</td>
+            </tr>
+            <tr>
+                <td><code>broadcastBlock(cid:data:)</code> <span class="badge async">async</span></td>
+                <td>Push block data to all connected peers.</td>
+            </tr>
+            <tr>
+                <td><code>handleBlockRequest(cid:from:)</code> <span class="badge async">async</span></td>
+                <td>Serve a block request. Checks Tally, fetches from local chain, sends <code>.block</code> or <code>.dontHave</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>DHT</h3>
+
+    <h4>findNode(target:) → [PeerEndpoint]</h4>
+    <p>Look up peers close to a target key in the DHT. Returns the locally-known closest peers and queries up to 3 of them for their closest peers.</p>
+
+    <h2 id="connections">PeerConnection</h2>
+    <p>A TCP connection to a single peer, built on swift-nio <code>Channel</code>.</p>
+
+    <pre><code><span class="kw">public final class</span> <span class="ty">PeerConnection</span>: <span class="at">@unchecked</span> <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> id: <span class="ty">PeerID</span>
+    <span class="kw">public let</span> endpoint: <span class="ty">PeerEndpoint</span>
+    <span class="kw">public var</span> messages: <span class="ty">AsyncStream</span>&lt;<span class="ty">Message</span>&gt;
+
+    <span class="kw">public static func</span> <span class="fn">dial</span>(
+        endpoint: <span class="ty">PeerEndpoint</span>,
+        group: <span class="ty">EventLoopGroup</span>
+    ) <span class="kw">async throws</span> -> <span class="ty">PeerConnection</span>
+
+    <span class="kw">public func</span> <span class="fn">send</span>(_ message: <span class="ty">Message</span>) <span class="kw">async throws</span>
+    <span class="kw">public func</span> <span class="fn">cancel</span>()
+}</code></pre>
+
+    <p>Inbound messages are delivered via <code>AsyncStream&lt;Message&gt;</code>. The stream finishes when the connection closes.</p>
+
+    <h3>NIO Pipeline</h3>
+    <div class="diagram">TCP bytes → MessageFrameDecoder → PeerChannelHandler → AsyncStream&lt;Message&gt;
+                    │                         │
+                    ├── length-prefix decode   ├── feed to PeerConnection
+                    └── Message.deserialize    └── close detection</div>
+
+    <p><code>MessageFrameDecoder</code> handles buffering and 4-byte big-endian length prefix decoding, then deserializes the payload into a <code>Message</code> enum value.</p>
+
+    <h2>PeerEndpoint</h2>
+    <pre><code><span class="kw">public struct</span> <span class="ty">PeerEndpoint</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span> {
+    <span class="kw">public let</span> publicKey: <span class="ty">String</span>
+    <span class="kw">public let</span> host: <span class="ty">String</span>
+    <span class="kw">public let</span> port: <span class="ty">UInt16</span>
+}</code></pre>
+
+    <h2 id="router">Router (Kademlia DHT)</h2>
+    <p>A Kademlia-style routing table with 256 k-buckets.</p>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">Router</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public init</span>(localID: <span class="ty">PeerID</span>, k: <span class="ty">Int</span> = <span class="num">20</span>)
+}</code></pre>
+
+    <h3>Methods</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>addPeer(_:endpoint:tally:)</code></td>
+                <td>Add or update a peer. When bucket is full, evicts the peer with lowest Tally reputation.</td>
+            </tr>
+            <tr>
+                <td><code>closestPeers(to:count:)</code></td>
+                <td>Return the <code>count</code> closest peers to a target hash by XOR distance.</td>
+            </tr>
+            <tr>
+                <td><code>allPeers()</code></td>
+                <td>Return all peers across all buckets.</td>
+            </tr>
+            <tr>
+                <td><code>peerCount()</code></td>
+                <td>Total number of peers in the routing table.</td>
+            </tr>
+            <tr>
+                <td><code>bucketIndex(for:)</code></td>
+                <td>Get the k-bucket index for a given peer key.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Static Utilities</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>Router.hash(_:)</code></td><td>SHA-256 hash of a string, returned as <code>[UInt8]</code>.</td></tr>
+            <tr><td><code>Router.commonPrefixLength(_:_:)</code></td><td>XOR-based common prefix length between two hashes.</td></tr>
+            <tr><td><code>Router.xorDistance(_:_:)</code></td><td>Byte-wise XOR distance between two hashes.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>BucketEntry</h3>
+    <pre><code><span class="kw">public struct</span> <span class="ty">BucketEntry</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> id: <span class="ty">PeerID</span>
+    <span class="kw">public let</span> hash: [<span class="ty">UInt8</span>]
+    <span class="kw">public let</span> endpoint: <span class="ty">PeerEndpoint</span>
+    <span class="kw">public var</span> lastSeen: <span class="ty">ContinuousClock</span>.<span class="ty">Instant</span>
+}</code></pre>
+
+    <h3>How K-Buckets Work</h3>
+    <p>The 256-bit SHA-256 keyspace is divided into 256 buckets by Common Prefix Length (CPL) between the local node's hash and each peer's hash:</p>
+    <ul>
+        <li><strong>Bucket 0</strong>: Peers where the first bit differs (half the keyspace — far away)</li>
+        <li><strong>Bucket 1</strong>: Peers sharing 1 prefix bit (quarter of the keyspace)</li>
+        <li><strong>Bucket 255</strong>: Peers sharing 255 prefix bits (extremely close neighbors)</li>
+    </ul>
+    <p>Each bucket holds at most <code>k</code> entries (default 20). When full, the peer with the lowest Tally reputation is evicted.</p>
+
+    <h2 id="messages">Wire Protocol</h2>
+    <p>All messages are serialized to a binary format with a 1-byte tag followed by a message-specific payload.</p>
+
+    <pre><code><span class="kw">public enum</span> <span class="ty">Message</span>: <span class="ty">Sendable</span> {
+    <span class="kw">case</span> ping(nonce: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> pong(nonce: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> wantBlock(cid: <span class="ty">String</span>)
+    <span class="kw">case</span> block(cid: <span class="ty">String</span>, data: <span class="ty">Data</span>)
+    <span class="kw">case</span> dontHave(cid: <span class="ty">String</span>)
+    <span class="kw">case</span> findNode(target: <span class="ty">Data</span>)
+    <span class="kw">case</span> neighbors([<span class="ty">PeerEndpoint</span>])
+    <span class="kw">case</span> announceBlock(cid: <span class="ty">String</span>)
+}</code></pre>
+
+    <h3>Message Types</h3>
+    <table>
+        <thead>
+            <tr><th>Tag</th><th>Message</th><th>Payload</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>0</td><td><code>ping</code></td><td>8 bytes: nonce</td><td>Liveness check</td></tr>
+            <tr><td>1</td><td><code>pong</code></td><td>8 bytes: nonce</td><td>Liveness response</td></tr>
+            <tr><td>2</td><td><code>wantBlock</code></td><td>2 + N bytes: CID</td><td>Request content by CID</td></tr>
+            <tr><td>3</td><td><code>block</code></td><td>2 + N + 4 + M bytes</td><td>Deliver content</td></tr>
+            <tr><td>4</td><td><code>dontHave</code></td><td>2 + N bytes: CID</td><td>Negative response</td></tr>
+            <tr><td>5</td><td><code>findNode</code></td><td>2 + N bytes: target hash</td><td>DHT peer lookup</td></tr>
+            <tr><td>6</td><td><code>neighbors</code></td><td>Variable: endpoint list</td><td>DHT lookup response</td></tr>
+            <tr><td>7</td><td><code>announceBlock</code></td><td>2 + N bytes: CID</td><td>Block availability</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Framing</h3>
+    <pre><code><span class="kw">public static func</span> <span class="fn">frame</span>(_ message: <span class="ty">Message</span>) -> <span class="ty">Data</span></code></pre>
+    <p>Wraps a serialized message in a 4-byte big-endian length prefix. Maximum frame size enforced at 64 MB.</p>
+
+    <h2>IvyConfig</h2>
+    <pre><code><span class="kw">public struct</span> <span class="ty">IvyConfig</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> publicKey: <span class="ty">String</span>
+    <span class="kw">public let</span> listenPort: <span class="ty">UInt16</span>             <span class="cm">// default: 4001</span>
+    <span class="kw">public let</span> bootstrapPeers: [<span class="ty">PeerEndpoint</span>] <span class="cm">// default: []</span>
+    <span class="kw">public let</span> enableLocalDiscovery: <span class="ty">Bool</span>     <span class="cm">// default: true</span>
+    <span class="kw">public let</span> tallyConfig: <span class="ty">TallyConfig</span>       <span class="cm">// default: .default</span>
+    <span class="kw">public let</span> kBucketSize: <span class="ty">Int</span>              <span class="cm">// default: 20</span>
+    <span class="kw">public let</span> maxConcurrentRequests: <span class="ty">Int</span>    <span class="cm">// default: 6</span>
+    <span class="kw">public let</span> requestTimeout: <span class="ty">Duration</span>      <span class="cm">// default: 15s</span>
+    <span class="kw">public let</span> serviceType: <span class="ty">String</span>           <span class="cm">// default: "_ivy._tcp"</span>
+}</code></pre>
+
+    <h2>IvyDelegate</h2>
+    <p>Optional protocol for receiving lifecycle and content events:</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">IvyDelegate</span>: <span class="ty">AnyObject</span>, <span class="ty">Sendable</span> {
+    <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didConnect peer: <span class="ty">PeerID</span>)
+    <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didDisconnect peer: <span class="ty">PeerID</span>)
+    <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didReceiveBlockAnnouncement cid: <span class="ty">String</span>, from peer: <span class="ty">PeerID</span>)
+    <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didReceiveBlock cid: <span class="ty">String</span>, data: <span class="ty">Data</span>, from peer: <span class="ty">PeerID</span>)
+}</code></pre>
+    <p>All methods have default empty implementations — implement only the ones you need.</p>
+
+    <h2 id="network-worker">NetworkCASWorker</h2>
+    <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
+    <p>Bridges the Ivy network layer into the <code>AcornCASWorker</code> chain. When the local chain misses, this worker asks the peer network.</p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">NetworkCASWorker</span>: <span class="ty">AcornCASWorker</span> {
+    <span class="kw">public var</span> timeout: <span class="ty">Duration</span>? { .seconds(<span class="num">30</span>) }
+}</code></pre>
+
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Behavior</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>has(cid:)</code></td>
+                <td>Attempts to fetch from network, returns true if found.</td>
+            </tr>
+            <tr>
+                <td><code>getLocal(cid:)</code></td>
+                <td>Calls <code>Ivy.fetchBlock(cid:)</code> — selects closest, highest-reputation peers, sends <code>.wantBlock</code>, waits for <code>.block</code> response or timeout.</td>
+            </tr>
+            <tr>
+                <td><code>storeLocal(cid:data:)</code></td>
+                <td>No-op. Network is read-only in the chain model.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Local Discovery</h2>
+    <p>On Apple platforms (<code>#if canImport(Network)</code>), Ivy can discover peers on the local network via Bonjour/mDNS:</p>
+    <ul>
+        <li><strong>Advertising</strong>: Announces the node's service type, port, and public key as a TXT record</li>
+        <li><strong>Browsing</strong>: Discovers other Ivy nodes on the LAN and auto-connects</li>
+        <li><strong>Service type</strong>: Configurable via <code>IvyConfig.serviceType</code> (default <code>"_ivy._tcp"</code>)</li>
+    </ul>
+
+    <div class="callout info">
+        <div class="callout-title">Linux</div>
+        Local discovery requires Network.framework and is only available on Apple platforms. On Linux, use <code>bootstrapPeers</code> in the config to specify known peers.
+    </div>
+
+    <h2>Content Routing Flow</h2>
+    <p>When <code>NetworkCASWorker.getLocal(cid:)</code> is called:</p>
+    <ol>
+        <li><strong>Peer selection</strong>: <code>Router.closestPeers(to: hash(cid))</code> finds peers near the content in the keyspace</li>
+        <li><strong>Reputation ranking</strong>: Candidates are filtered to connected peers and sorted by <code>Tally.reputation()</code></li>
+        <li><strong>Parallel requests</strong>: Up to <code>maxConcurrentRequests</code> (default 6) peers are asked simultaneously via <code>.wantBlock</code></li>
+        <li><strong>First response wins</strong>: The first <code>.block</code> response resolves the request; the timeout (default 15s) resolves to nil</li>
+        <li><strong>Metrics recorded</strong>: Latency, success/failure, and bytes transferred are recorded in Tally for each peer</li>
+    </ol>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
+    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
+    <a href="acorn.html#composite" class="nested">Composite Worker</a>
+    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Architecture</h1>
+    <p class="subtitle">How the Lattice packages compose into a complete peer-to-peer content-addressable storage system.</p>
+
+    <h2>The CAS Worker Chain</h2>
+    <p>The central design pattern in Lattice is the <strong>worker chain</strong>. Each worker implements the <code>AcornCASWorker</code> protocol and holds optional <code>near</code> (faster) and <code>far</code> (slower) references to adjacent workers. The protocol's default <code>get()</code> walks the chain automatically:</p>
+
+    <div class="diagram">get(cid) called on CompositeCASWorker
+    │
+    ▼
+┌─────────────────┐    miss    ┌─────────────────┐    miss    ┌─────────────────┐
+│  MemoryCASWorker │ ────────→ │  DiskCASWorker   │ ────────→ │ NetworkCASWorker │
+│    (~10 ns)      │           │   (~100 µs)      │           │   (~100 ms)      │
+└─────────────────┘           └─────────────────┘           └─────────────────┘
+         ▲                            ▲                            │
+         │         backfill           │         backfill           │
+         └────────────────────────────┴────────────────────────────┘
+                                found data</div>
+
+    <p>When data is found at a slow tier, it automatically <strong>backfills</strong> toward the fast end. A second request for the same content hits memory in nanoseconds instead of waiting for disk or network.</p>
+
+    <h2>Data Flow: Get</h2>
+    <ol>
+        <li><code>CompositeCASWorker.get(cid:)</code> delegates to the <strong>farthest</strong> worker</li>
+        <li>That worker checks its <code>near</code> reference first (memory)</li>
+        <li>Memory miss → check local (disk). Disk miss → check <code>far</code> (this doesn't exist, so falls through)</li>
+        <li>The protocol's default <code>get()</code> on DiskWorker calls the near's <code>get()</code> first, and if near misses, calls <code>getLocal()</code></li>
+        <li>Each worker that finds data calls <code>store()</code> on its <code>near</code>, propagating the data upward</li>
+    </ol>
+
+    <h2>Data Flow: Store</h2>
+    <ol>
+        <li><code>storeLocal()</code> on the current worker</li>
+        <li><code>store()</code> on <code>near</code> (recurses toward the fast end)</li>
+        <li>Data ends up in all tiers from the storage point upward</li>
+    </ol>
+
+    <h2>Network Layer</h2>
+    <p>When the local chain misses, <code>NetworkCASWorker</code> delegates to the <code>Ivy</code> actor to fetch content from the peer network:</p>
+
+    <div class="diagram">NetworkCASWorker.getLocal(cid)
+    │
+    ▼
+Ivy.fetchBlock(cid)
+    │
+    ├── Router.closestPeers(to: hash(cid))
+    │      Select top-N peers by XOR distance
+    │
+    ├── Tally.reputation(for: peer)
+    │      Rank by composite reputation score
+    │
+    ├── PeerConnection.send(.wantBlock(cid))
+    │      Send request to best peers
+    │
+    └── await response or timeout
+           │
+           ├── .block(cid, data) → resolve, backfill chain
+           └── .dontHave(cid) → record failure, try next</div>
+
+    <h2>Reputation Gating</h2>
+    <p>Tally sits above the CAS chain, not inside it. When the node <em>receives</em> a block request from a peer, Tally gates the response:</p>
+
+    <div class="diagram">Inbound: peer requests block by CID
+    │
+    ▼
+Tally.shouldAllow(peer)
+    │
+    ├── ratePressure &lt; 0.5 → always allow
+    │
+    ├── ratePressure 0.5–1.0 → require reputation ≥ scaled threshold
+    │
+    └── ratePressure ≥ 1.0 → require reputation ≥ 0.8
+           │
+           ├── allowed → fetch from local chain, send .block
+           └── denied → send .dontHave, record in metrics</div>
+
+    <p>This means the system self-balances: peers who contribute data build reputation and get served. Peers who only consume build debt and are progressively throttled.</p>
+
+    <h2>Concurrency Model</h2>
+
+    <h3>Actors</h3>
+    <p>All workers (<code>MemoryCASWorker</code>, <code>DiskCASWorker</code>, <code>NetworkCASWorker</code>, <code>CompositeCASWorker</code>) and the <code>Ivy</code> node are Swift actors. This gives compile-time data race safety — no manual lock management for the async path.</p>
+
+    <h3>Lock-Based Hot Path</h3>
+    <p><code>MemoryCASWorker</code> and <code>Tally</code> also expose <strong>nonisolated sync methods</strong> that bypass the actor executor and use an internal lock directly. This eliminates the ~7µs actor hop overhead for hot-path operations:</p>
+
+    <table>
+        <thead>
+            <tr><th>API</th><th>Latency</th><th>Use Case</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>syncGet(cid:)</code></td><td>6–28 ns</td><td>Hot-path reads in tight loops</td></tr>
+            <tr><td><code>await getLocal(cid:)</code></td><td>~7.5 µs</td><td>General async code, chain traversal</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Cross-Platform Locking</h3>
+    <p>Both <code>Tally</code> and the storage workers use a <code>LockedState&lt;State&gt;</code> abstraction:</p>
+    <ul>
+        <li><strong>Apple</strong>: <code>OSAllocatedUnfairLock</code> (optimal for uncontended, non-recursive locking)</li>
+        <li><strong>Linux</strong>: <code>NSLock</code> wrapper with the same API surface</li>
+    </ul>
+
+    <h2>Eviction Strategy</h2>
+    <p>Both memory and disk workers use the same eviction algorithm from <code>Acorn.LFUDecayCache</code>:</p>
+    <ul>
+        <li><strong>LFU with exponential decay</strong>: access scores decay over time so recently-accessed items score higher than historically popular but now-cold items</li>
+        <li><strong>Sampled eviction</strong>: instead of scanning all entries, the cache samples N random candidates and evicts the lowest-scored one. This is O(k) where k = sample size (default 5)</li>
+        <li><strong>O(1) global decay</strong>: a global multiplier tracks aggregate decay, avoiding per-entry updates on every access</li>
+        <li><strong>Background renormalization</strong>: when the global multiplier risks floating-point underflow, scores are renormalized incrementally</li>
+    </ul>
+
+    <h2>Wire Protocol</h2>
+    <p>Ivy uses a simple length-prefixed binary protocol over TCP (via swift-nio):</p>
+
+    <div class="diagram">┌──────────────────────────────────────────────┐
+│ Frame Format                                  │
+├──────────┬───────────┬───────────────────────┤
+│ 4 bytes  │  1 byte   │  variable             │
+│ uint32   │  tag      │  payload              │
+│ (length) │  (0–7)    │  (message-specific)   │
+└──────────┴───────────┴───────────────────────┘
+
+Tags:
+  0 = ping       (8 bytes: nonce)
+  1 = pong       (8 bytes: nonce)
+  2 = wantBlock  (2 + N bytes: CID string)
+  3 = block      (2 + N + M bytes: CID + data)
+  4 = dontHave   (2 + N bytes: CID string)
+  5 = findNode   (2 + N bytes: target hash)
+  6 = neighbors  (variable: endpoint list)
+  7 = announce   (2 + N bytes: CID string)</div>
+
+    <h2>DHT Routing</h2>
+    <p>Ivy implements a Kademlia-style distributed hash table:</p>
+    <ul>
+        <li><strong>XOR distance</strong>: peers and content are placed in the same 256-bit keyspace via SHA-256</li>
+        <li><strong>K-buckets</strong>: 256 buckets, one per bit of common prefix length (CPL). Default k=20 entries per bucket</li>
+        <li><strong>Reputation-weighted eviction</strong>: when a bucket is full, the peer with the lowest Tally reputation score is evicted to make room for the new peer</li>
+        <li><strong>Peer lookup</strong>: <code>findNode</code> queries the closest known peers, who respond with their closest known peers, recursively narrowing toward the target</li>
+    </ul>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

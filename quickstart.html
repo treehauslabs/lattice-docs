@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Quick Start</h1>
+    <p class="subtitle">Get a content-addressable storage chain running in under 20 lines of Swift.</p>
+
+    <h2>1. Add Dependencies</h2>
+    <p>In your <code>Package.swift</code>:</p>
+
+    <div class="code-label">Package.swift</div>
+    <pre><code><span class="kw">dependencies</span>: [
+    .package(url: <span class="str">"https://github.com/treehauslabs/Acorn.git"</span>, from: <span class="str">"1.0.0"</span>),
+    .package(url: <span class="str">"https://github.com/treehauslabs/AcornMemoryWorker.git"</span>, from: <span class="str">"1.0.0"</span>),
+    .package(url: <span class="str">"https://github.com/treehauslabs/AcornDiskWorker.git"</span>, from: <span class="str">"1.0.0"</span>),
+]</code></pre>
+
+    <h2>2. Create a Storage Chain</h2>
+
+    <div class="code-label">main.swift</div>
+    <pre><code><span class="kw">import</span> Acorn
+<span class="kw">import</span> AcornMemoryWorker
+<span class="kw">import</span> AcornDiskWorker
+
+<span class="kw">let</span> memory = <span class="ty">MemoryCASWorker</span>(capacity: <span class="num">10_000</span>)
+<span class="kw">let</span> disk = <span class="kw">try</span> <span class="ty">DiskCASWorker</span>(
+    directory: URL(filePath: <span class="str">"/tmp/lattice-store"</span>),
+    capacity: <span class="num">100_000</span>
+)
+
+<span class="kw">let</span> chain = <span class="kw">await</span> <span class="ty">CompositeCASWorker</span>(
+    workers: [<span class="str">"memory"</span>: memory, <span class="str">"disk"</span>: disk],
+    order: [<span class="str">"memory"</span>, <span class="str">"disk"</span>]
+)</code></pre>
+
+    <div class="callout info">
+        <div class="callout-title">How chaining works</div>
+        The <code>CompositeCASWorker</code> initializer automatically links workers: memory.far = disk, disk.near = memory. You don't need to call <code>link()</code> manually.
+    </div>
+
+    <h2>3. Store and Retrieve Content</h2>
+
+    <pre><code><span class="kw">let</span> data = <span class="ty">Data</span>(<span class="str">"Hello, Lattice!"</span>.utf8)
+<span class="kw">let</span> cid = <span class="ty">ContentIdentifier</span>(for: data)
+
+<span class="kw">await</span> chain.store(cid: cid, data: data)
+
+<span class="kw">if let</span> retrieved = <span class="kw">await</span> chain.get(cid: cid) {
+    print(<span class="ty">String</span>(data: retrieved, encoding: .utf8)!) <span class="cm">// "Hello, Lattice!"</span>
+}</code></pre>
+
+    <p>The first <code>get()</code> might hit disk. The second will hit memory — content automatically backfills toward the fast end of the chain.</p>
+
+    <h2>4. Add Networking</h2>
+    <p>To fetch content from peers, add Ivy and Tally:</p>
+
+    <div class="code-label">Package.swift (additional deps)</div>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Tally.git"</span>, from: <span class="str">"1.0.0"</span>),
+.package(url: <span class="str">"https://github.com/treehauslabs/Ivy.git"</span>, from: <span class="str">"1.0.0"</span>),</code></pre>
+
+    <div class="code-label">Networked node</div>
+    <pre><code><span class="kw">import</span> Ivy
+
+<span class="kw">let</span> config = <span class="ty">IvyConfig</span>(
+    publicKey: myPublicKey,
+    listenPort: <span class="num">4001</span>,
+    bootstrapPeers: [
+        <span class="ty">PeerEndpoint</span>(publicKey: seedKey, host: <span class="str">"seed.example.com"</span>, port: <span class="num">4001</span>)
+    ]
+)
+
+<span class="kw">let</span> node = <span class="ty">Ivy</span>(config: config)
+<span class="kw">try await</span> node.start()
+
+<span class="cm">// Get the network worker and add it to the chain</span>
+<span class="kw">let</span> netWorker = <span class="kw">await</span> node.worker()
+
+<span class="kw">let</span> fullChain = <span class="kw">await</span> <span class="ty">CompositeCASWorker</span>(
+    workers: [<span class="str">"memory"</span>: memory, <span class="str">"disk"</span>: disk, <span class="str">"network"</span>: netWorker],
+    order: [<span class="str">"memory"</span>, <span class="str">"disk"</span>, <span class="str">"network"</span>]
+)</code></pre>
+
+    <p>Now <code>fullChain.get(cid:)</code> tries memory → disk → network. Content fetched from peers automatically backfills to disk and memory.</p>
+
+    <h2>5. Hot-Path Reads</h2>
+    <p>For performance-critical paths, bypass the actor executor entirely:</p>
+
+    <pre><code><span class="cm">// Sync API: 6-28ns instead of ~7.5µs</span>
+<span class="kw">if let</span> data = memory.syncGet(cid: someCID) {
+    <span class="cm">// Fast path: no async/await, no actor hop</span>
+    process(data)
+} <span class="kw">else</span> {
+    <span class="cm">// Slow path: fall through to full chain</span>
+    <span class="kw">if let</span> data = <span class="kw">await</span> fullChain.get(cid: someCID) {
+        process(data)
+    }
+}</code></pre>
+
+    <div class="callout tip">
+        <div class="callout-title">When to use sync vs async</div>
+        Use the sync API (<code>syncGet</code>, <code>syncHas</code>, <code>syncStore</code>) when you're in a tight loop or on a hot path where the ~7µs actor hop overhead matters. For general application code, the async API is simpler and composes with the chain naturally.
+    </div>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

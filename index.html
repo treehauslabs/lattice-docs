@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lattice Docs — Technical Documentation</title>
+    <meta name="description" content="Technical documentation for the Lattice ecosystem: Acorn, AcornMemoryWorker, AcornDiskWorker, Tally, and Ivy.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="6" r="4" fill="#22d3ee"/>
+            <circle cx="6" cy="22" r="3" fill="#a78bfa"/>
+            <circle cx="16" cy="22" r="3" fill="#a78bfa"/>
+            <circle cx="26" cy="22" r="3" fill="#a78bfa"/>
+            <line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/>
+            <line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/>
+            <line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/>
+        </svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
+    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
+    <a href="acorn.html#composite" class="nested">Composite Worker</a>
+    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="memory-worker.html#sync-api" class="nested">Sync API</a>
+    <a href="memory-worker.html#async-api" class="nested">Async API</a>
+    <a href="disk-worker.html">Disk Worker</a>
+    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
+    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+    <a href="tally.html#peer-ledger" class="nested">Peer Ledger</a>
+    <a href="tally.html#reputation" class="nested">Reputation Scoring</a>
+    <a href="tally.html#rate-pressure" class="nested">Rate Pressure</a>
+    <a href="tally.html#challenges" class="nested">Proof-of-Work</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+    <a href="ivy.html#connections" class="nested">Connections</a>
+    <a href="ivy.html#router" class="nested">DHT Router</a>
+    <a href="ivy.html#messages" class="nested">Wire Protocol</a>
+    <a href="ivy.html#network-worker" class="nested">Network Worker</a>
+</aside>
+
+<main class="main">
+    <h1>Lattice Documentation</h1>
+    <p class="subtitle">Technical reference for the Lattice content-addressable storage and peer-to-peer networking stack. Built in Swift 6 for Apple and Linux platforms.</p>
+
+    <h2>The Ecosystem</h2>
+    <p>Lattice is a modular stack of Swift packages that together form a complete peer-to-peer content-addressable storage system. Each package has a single responsibility and can be used independently or composed into a full node.</p>
+
+    <div class="chain-visual">
+        <div class="chain-node memory">MemoryWorker<span class="chain-label">nanoseconds</span></div>
+        <span class="chain-arrow">→</span>
+        <div class="chain-node disk">DiskWorker<span class="chain-label">microseconds</span></div>
+        <span class="chain-arrow">→</span>
+        <div class="chain-node tally">Tally<span class="chain-label">reputation gate</span></div>
+        <span class="chain-arrow">→</span>
+        <div class="chain-node network">Ivy<span class="chain-label">network fetch</span></div>
+    </div>
+
+    <h2>Packages</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Package</th>
+                <th>Role</th>
+                <th>Key Types</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><a href="acorn.html"><strong>Acorn</strong></a></td>
+                <td>Core protocol and primitives. Defines the <code>AcornCASWorker</code> actor protocol, <code>ContentIdentifier</code>, and the composite chain.</td>
+                <td><code>AcornCASWorker</code>, <code>ContentIdentifier</code>, <code>CompositeCASWorker</code>, <code>LFUDecayCache</code></td>
+            </tr>
+            <tr>
+                <td><a href="memory-worker.html"><strong>AcornMemoryWorker</strong></a></td>
+                <td>In-memory CAS with dual sync/async API. 3–28ns sync reads via lock-based hot path.</td>
+                <td><code>MemoryCASWorker</code>, <code>CASMetrics</code></td>
+            </tr>
+            <tr>
+                <td><a href="disk-worker.html"><strong>AcornDiskWorker</strong></a></td>
+                <td>Filesystem-backed CAS with Bloom filter fast rejection, POSIX I/O, and SHA-256 integrity verification.</td>
+                <td><code>DiskCASWorker</code>, <code>FileSystemProvider</code>, <code>CASMetrics</code></td>
+            </tr>
+            <tr>
+                <td><a href="tally.html"><strong>Tally</strong></a></td>
+                <td>Peer reputation and rate limiting. Bitswap-inspired debt ratios, sigmoid gating, proof-of-work challenges.</td>
+                <td><code>Tally</code>, <code>PeerLedger</code>, <code>Challenge</code>, <code>TallyConfig</code></td>
+            </tr>
+            <tr>
+                <td><a href="ivy.html"><strong>Ivy</strong></a></td>
+                <td>Peer-to-peer networking. Kademlia DHT, TCP transport via swift-nio, content routing, local discovery.</td>
+                <td><code>Ivy</code>, <code>Router</code>, <code>PeerConnection</code>, <code>Message</code>, <code>NetworkCASWorker</code></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Design Principles</h2>
+
+    <h3>Actor-Based Concurrency</h3>
+    <p>Every storage worker is a Swift actor, providing compile-time data race safety. The <code>AcornCASWorker</code> protocol requires actor conformance, ensuring all implementations are thread-safe by construction.</p>
+
+    <h3>Content Addressing</h3>
+    <p>All data is identified by the SHA-256 hash of its contents. This makes storage inherently deduplicating, verifiable, and cacheable. A <code>ContentIdentifier</code> computed from data in Tokyo will be identical to one computed from the same data in London.</p>
+
+    <h3>Worker Chaining</h3>
+    <p>Workers link together via <code>near</code> and <code>far</code> references, forming a storage hierarchy. The protocol's default <code>get()</code> implementation walks the chain from fast to slow, backfilling faster layers on hits. No orchestration code needed — the chain self-optimizes.</p>
+
+    <h3>Cross-Platform</h3>
+    <p>All packages compile on both Apple platforms (macOS, iOS, tvOS, watchOS, visionOS) and Linux. Platform-specific APIs are conditionally compiled — <code>OSAllocatedUnfairLock</code> on Apple, <code>NSLock</code> on Linux; <code>Network.framework</code> discovery wrapped in <code>#if canImport(Network)</code>.</p>
+
+    <h2>Dependency Graph</h2>
+
+    <div class="diagram">┌──────────┐
+│   Ivy    │ ─── swift-nio
+├──────────┤
+│  Tally   │ ─── swift-crypto
+├──────────┤
+│ DiskWkr  │
+├──────────┤
+│ MemWkr   │
+├──────────┤
+│  Acorn   │ ─── swift-crypto
+└──────────┘</div>
+
+    <p>Arrows point downward: Ivy depends on Tally and Acorn. Tally depends on Acorn. Both storage workers depend only on Acorn. External dependencies are limited to <code>swift-crypto</code> (SHA-256) and <code>swift-nio</code> (TCP transport).</p>
+
+    <h2>Platform Support</h2>
+
+    <table>
+        <thead>
+            <tr><th>Platform</th><th>Minimum Version</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>macOS</td><td>13+ (Acorn/Workers), 14+ (Tally/Ivy)</td></tr>
+            <tr><td>iOS</td><td>16+ (Acorn/Workers), 17+ (Tally/Ivy)</td></tr>
+            <tr><td>tvOS</td><td>17+</td></tr>
+            <tr><td>watchOS</td><td>10+</td></tr>
+            <tr><td>visionOS</td><td>1+</td></tr>
+            <tr><td>Linux</td><td>Swift 6.0+</td></tr>
+        </tbody>
+    </table>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span>
+        <a href="https://github.com/treehauslabs">GitHub</a>
+    </span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

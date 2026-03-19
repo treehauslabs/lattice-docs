@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tally — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+    <a href="tally.html#peer-ledger" class="nested">Peer Ledger</a>
+    <a href="tally.html#reputation" class="nested">Reputation Scoring</a>
+    <a href="tally.html#rate-pressure" class="nested">Rate Pressure</a>
+    <a href="tally.html#challenges" class="nested">Proof-of-Work</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Tally <span class="pkg-badge rep">Reputation</span></h1>
+    <p class="subtitle">Bitswap-inspired peer reputation and rate limiting. Tracks exchange history, computes composite reputation scores, and gates requests using rate pressure. Naturally Sybil-resistant — new peers must earn credit.</p>
+
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Tally.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+
+    <h2>Tally</h2>
+    <p>The main entry point. Thread-safe via internal locking — all methods are <code>nonisolated</code> and safe to call from any context.</p>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">Tally</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public init</span>(config: <span class="ty">TallyConfig</span> = .default)
+}</code></pre>
+
+    <h3>Recording Methods</h3>
+    <p>Call these when exchanging data with peers. They update the peer's ledger and mark reputation as stale.</p>
+
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>recordSent(peer:bytes:cpl:)</code></td>
+                <td>Track bytes sent to peer. Optional CPL for distance scaling.</td>
+            </tr>
+            <tr>
+                <td><code>recordReceived(peer:bytes:cpl:)</code></td>
+                <td>Track bytes received from peer. Builds their credit.</td>
+            </tr>
+            <tr>
+                <td><code>recordRequest(peer:)</code></td>
+                <td>Increment request counter for peer.</td>
+            </tr>
+            <tr>
+                <td><code>recordSuccess(peer:)</code></td>
+                <td>Record a successful response from peer.</td>
+            </tr>
+            <tr>
+                <td><code>recordFailure(peer:)</code></td>
+                <td>Record a failed response from peer.</td>
+            </tr>
+            <tr>
+                <td><code>recordLatency(peer:microseconds:)</code></td>
+                <td>Record a latency sample. Updates EWMA.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="callout info">
+        <div class="callout-title">Distance scaling (CPL)</div>
+        When a Common Prefix Length is provided, bytes are scaled by <code>(256 - cpl) / 256</code>. Serving data to nearby peers (high CPL) costs less reputation than serving distant peers. This incentivizes nodes to serve their local neighborhood.
+    </div>
+
+    <h3>Gating</h3>
+
+    <h4>shouldAllow(peer:) → Bool</h4>
+    <p>The primary gating function. Determines whether to serve a request from a peer based on current rate pressure and the peer's reputation.</p>
+
+    <pre><code><span class="kw">if</span> tally.shouldAllow(peer: requestingPeer) {
+    <span class="cm">// serve the request</span>
+} <span class="kw">else</span> {
+    <span class="cm">// send dontHave</span>
+}</code></pre>
+
+    <h3>Query Methods</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Return</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>reputation(for:)</code></td><td><code>Double</code></td><td>Composite score 0–1. Triggers decay.</td></tr>
+            <tr><td><code>debtRatio(for:)</code></td><td><code>Double</code></td><td>bytesSent / (bytesReceived + 1)</td></tr>
+            <tr><td><code>peerLedger(for:)</code></td><td><code>PeerLedger?</code></td><td>Full ledger for a peer</td></tr>
+            <tr><td><code>allPeers()</code></td><td><code>[PeerID]</code></td><td>All tracked peer IDs</td></tr>
+            <tr><td><code>resetPeer(_:)</code></td><td><code>Void</code></td><td>Remove a peer's ledger entirely</td></tr>
+            <tr><td><code>ratePressure()</code></td><td><code>Double</code></td><td>Current rate pressure 0–2</td></tr>
+            <tr><td><code>peerCount</code></td><td><code>Int</code></td><td>Number of tracked peers</td></tr>
+            <tr><td><code>metrics</code></td><td><code>TallyMetrics</code></td><td>Aggregate allow/deny/byte counts</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="peer-ledger">PeerLedger</h2>
+    <p>Per-peer accounting. Tracks every dimension of the relationship with a single peer.</p>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">PeerLedger</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public var</span> bytesSent: <span class="ty">DecayingCounter</span>
+    <span class="kw">public var</span> bytesReceived: <span class="ty">DecayingCounter</span>
+    <span class="kw">public var</span> requestCount: <span class="ty">Int</span>
+    <span class="kw">public var</span> successCount: <span class="ty">Int</span>
+    <span class="kw">public var</span> failureCount: <span class="ty">Int</span>
+    <span class="kw">public var</span> challengeHardness: <span class="ty">Int</span>
+    <span class="kw">public var</span> firstSeen: <span class="ty">ContinuousClock</span>.<span class="ty">Instant</span>
+    <span class="kw">public var</span> lastSeen: <span class="ty">ContinuousClock</span>.<span class="ty">Instant</span>
+    <span class="kw">public var</span> latencyEWMA: <span class="ty">EWMA</span>
+}</code></pre>
+
+    <h3>Computed Properties</h3>
+    <table>
+        <thead>
+            <tr><th>Property</th><th>Formula</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>debtRatio</code></td><td><code>bytesSent / (bytesReceived + 1)</code></td></tr>
+            <tr><td><code>reciprocity</code></td><td><code>1.0 / (1.0 + debtRatio)</code></td></tr>
+            <tr><td><code>successRate</code></td><td><code>successes / (successes + failures)</code> or 0.5 if no data</td></tr>
+            <tr><td><code>failurePenalty</code></td><td><code>(failures / total)²</code> — quadratic penalty</td></tr>
+        </tbody>
+    </table>
+
+    <h3>DecayingCounter</h3>
+    <p>A counter whose value decays exponentially over time:</p>
+    <pre><code>value *= exp2(-elapsedSeconds / halfLife)</code></pre>
+    <p>This means recent exchanges matter more than historical ones. A peer who was generous a week ago but hasn't contributed since will see their credit decay.</p>
+
+    <h3>EWMA (Exponential Weighted Moving Average)</h3>
+    <p>Used for latency tracking. Smoothing factor α = 0.3 by default:</p>
+    <pre><code>value = α × sample + (1 - α) × value</code></pre>
+    <p>Also tracks <code>min</code>, <code>max</code>, and <code>count</code>.</p>
+
+    <h2 id="reputation">Reputation Scoring</h2>
+    <p>Reputation is a composite score in the range [0, 1], computed from four weighted components:</p>
+
+    <table>
+        <thead>
+            <tr><th>Component</th><th>Weight</th><th>What It Measures</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Reciprocity</td><td>0.2</td><td>Balance of bytes exchanged. Freeloaders score low.</td></tr>
+            <tr><td>Latency</td><td>0.3</td><td>Response speed relative to baseline. Fast peers score high.</td></tr>
+            <tr><td>Success Rate</td><td>0.4</td><td>Fraction of successful responses minus quadratic failure penalty.</td></tr>
+            <tr><td>Challenges</td><td>0.1</td><td>Cumulative proof-of-work difficulty solved.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Formula</h3>
+    <pre><code>reputation = weights.reciprocity × adjustedReciprocity
+           + weights.latency × latencyScore
+           + weights.successRate × (successRate - failurePenalty)
+           + weights.challenges × challengeRatio</code></pre>
+
+    <p>Where:</p>
+    <ul>
+        <li><strong>adjustedReciprocity</strong> = reciprocity × confidence (confidence rises with total bytes exchanged vs baseline)</li>
+        <li><strong>latencyScore</strong> = min(baseline / (ewma + 1), 1.0)</li>
+        <li><strong>challengeRatio</strong> = min(challengeHardness / hardnessBaseline, 1.0)</li>
+    </ul>
+
+    <div class="callout tip">
+        <div class="callout-title">New peers</div>
+        A brand-new peer with no exchange history gets a reputation near 0.5 (from the default successRate). Under low rate pressure, they'll be served. Under high pressure, they'll need to build credit first.
+    </div>
+
+    <h3>Custom Weights</h3>
+    <pre><code><span class="kw">let</span> config = <span class="ty">TallyConfig</span>(
+    weights: <span class="ty">ReputationWeights</span>(
+        reciprocity: <span class="num">0.3</span>,
+        latency: <span class="num">0.2</span>,
+        successRate: <span class="num">0.4</span>,
+        challenges: <span class="num">0.1</span>
+    )
+)
+<span class="kw">let</span> tally = <span class="ty">Tally</span>(config: config)</code></pre>
+
+    <h2 id="rate-pressure">Rate Pressure</h2>
+    <p>Rate pressure determines how strict gating should be. It's based on actual throughput vs the configured limit:</p>
+
+    <pre><code>pressure = bytesInWindow / (rateLimitBytesPerSecond × windowDuration)</code></pre>
+
+    <p>Clamped to [0, 2]. The <code>shouldAllow()</code> thresholds scale with pressure:</p>
+
+    <table>
+        <thead>
+            <tr><th>Pressure Range</th><th>Behavior</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>&lt; 0.5</code></td><td>Always allow (plenty of capacity)</td></tr>
+            <tr><td><code>0.5 – 1.0</code></td><td>Require reputation ≥ scaled threshold (0.0 → 0.8)</td></tr>
+            <tr><td><code>≥ 1.0</code></td><td>Require reputation ≥ 0.8 (only well-known peers)</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout info">
+        <div class="callout-title">Self-balancing</div>
+        No manual rate limit tuning needed. Under low load, everyone gets served. Under high load, the system automatically prioritizes peers who contribute the most. Freeloaders are the first to be throttled.
+    </div>
+
+    <h2 id="challenges">Proof-of-Work Challenges</h2>
+    <p>Peers can earn reputation by solving computational puzzles. This provides a bootstrap mechanism for new peers who haven't exchanged data yet.</p>
+
+    <pre><code><span class="cm">// Node issues a challenge</span>
+<span class="kw">let</span> challenge = tally.issueChallenge()
+
+<span class="cm">// Peer solves it</span>
+<span class="kw">let</span> solver = <span class="ty">ChallengeSolver</span>()
+<span class="kw">let</span> solution = solver.solve(challenge)
+
+<span class="cm">// Node verifies and credits peer</span>
+<span class="kw">let</span> valid = tally.verifyChallenge(challenge, solution: solution, peer: peer)
+<span class="cm">// peer.challengeHardness += difficulty</span></code></pre>
+
+    <h3>Challenge Struct</h3>
+    <pre><code><span class="kw">public struct</span> <span class="ty">Challenge</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> nonce: <span class="ty">Data</span>          <span class="cm">// 32 random bytes</span>
+    <span class="kw">public let</span> difficulty: <span class="ty">Int</span>      <span class="cm">// required leading zero bits</span>
+    <span class="kw">public let</span> expiresAfter: <span class="ty">Duration</span>
+    <span class="kw">public var</span> isExpired: <span class="ty">Bool</span>
+    <span class="kw">public func</span> <span class="fn">verify</span>(solution: <span class="ty">Data</span>) -> <span class="ty">Bool</span>
+}</code></pre>
+
+    <p>Verification: SHA-256(nonce + solution) must have ≥ <code>difficulty</code> leading zero bits. Default difficulty is 16 bits (~65k hash attempts). Challenges expire after 30 seconds.</p>
+
+    <h2>TallyConfig</h2>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">TallyConfig</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> weights: <span class="ty">ReputationWeights</span>       <span class="cm">// default: .default</span>
+    <span class="kw">public let</span> latencyBaseline: <span class="ty">Double</span>        <span class="cm">// default: 100,000 µs</span>
+    <span class="kw">public let</span> decayHalfLife: <span class="ty">Double</span>          <span class="cm">// default: 3600 s</span>
+    <span class="kw">public let</span> challengeDifficulty: <span class="ty">Int</span>       <span class="cm">// default: 16 bits</span>
+    <span class="kw">public let</span> challengeExpiration: <span class="ty">Duration</span>  <span class="cm">// default: 30 s</span>
+    <span class="kw">public let</span> rateLimitBytesPerSecond: <span class="ty">Double</span> <span class="cm">// default: 10 MB/s</span>
+    <span class="kw">public let</span> rateWindow: <span class="ty">Double</span>            <span class="cm">// default: 1.0 s</span>
+    <span class="kw">public let</span> hardnessBaseline: <span class="ty">Int</span>         <span class="cm">// default: 160</span>
+    <span class="kw">public let</span> exchangeBaseline: <span class="ty">Double</span>      <span class="cm">// default: 100,000</span>
+    <span class="kw">public let</span> maxPeers: <span class="ty">Int</span>?                <span class="cm">// default: nil</span>
+}</code></pre>
+
+    <h2>TallyMetrics</h2>
+    <pre><code><span class="kw">public struct</span> <span class="ty">TallyMetrics</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span> {
+    <span class="kw">public var</span> allowed: <span class="ty">Int</span>
+    <span class="kw">public var</span> denied: <span class="ty">Int</span>
+    <span class="kw">public var</span> totalBytesSent: <span class="ty">Int</span>
+    <span class="kw">public var</span> totalBytesReceived: <span class="ty">Int</span>
+    <span class="kw">public var</span> challengesIssued: <span class="ty">Int</span>
+    <span class="kw">public var</span> challengesVerified: <span class="ty">Int</span>
+}</code></pre>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>

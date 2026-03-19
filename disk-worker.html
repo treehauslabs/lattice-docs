@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disk Worker — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
+    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>AcornDiskWorker <span class="pkg-badge worker">Storage</span></h1>
+    <p class="subtitle">Filesystem-backed content-addressable storage with Bloom filter fast rejection, POSIX I/O, SHA-256 integrity verification, and state persistence.</p>
+
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/AcornDiskWorker.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+
+    <h2>DiskCASWorker</h2>
+    <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
+
+    <p>Generic over <code>FileSystemProvider</code> for testability. Use the convenience initializer for production (defaults to <code>DefaultFileSystem</code>).</p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">DiskCASWorker</span>&lt;<span class="ty">F</span>: <span class="ty">FileSystemProvider</span>&gt;: <span class="ty">AcornCASWorker</span> {
+    <span class="kw">public init</span>(
+        directory: <span class="ty">URL</span>,
+        capacity: <span class="ty">Int</span>? = <span class="kw">nil</span>,
+        maxBytes: <span class="ty">Int</span>? = <span class="kw">nil</span>,
+        halfLife: <span class="ty">Duration</span> = .seconds(<span class="num">300</span>),
+        sampleSize: <span class="ty">Int</span> = <span class="num">5</span>,
+        timeout: <span class="ty">Duration</span>? = <span class="kw">nil</span>,
+        verifyReads: <span class="ty">Bool</span> = <span class="kw">true</span>
+    ) <span class="kw">throws</span>
+}</code></pre>
+
+    <h3>Parameters</h3>
+    <div class="param-list">
+        <div class="param">
+            <span class="param-name">directory</span>
+            <span class="param-type">URL</span>
+            <span class="param-desc">Root directory for the CAS store. 256 shard subdirectories (00–ff) are created automatically.</span>
+        </div>
+        <div class="param">
+            <span class="param-name">capacity</span>
+            <span class="param-type">Int?</span>
+            <span class="param-desc">Maximum number of entries before LFU eviction. Nil for unbounded.</span>
+        </div>
+        <div class="param">
+            <span class="param-name">maxBytes</span>
+            <span class="param-type">Int?</span>
+            <span class="param-desc">Maximum total bytes on disk. Nil for unbounded.</span>
+        </div>
+        <div class="param">
+            <span class="param-name">halfLife</span>
+            <span class="param-type">Duration</span>
+            <span class="param-desc">LFU score decay half-life. Default 300 seconds.</span>
+        </div>
+        <div class="param">
+            <span class="param-name">sampleSize</span>
+            <span class="param-type">Int</span>
+            <span class="param-desc">Eviction candidate sample size. Default 5.</span>
+        </div>
+        <div class="param">
+            <span class="param-name">verifyReads</span>
+            <span class="param-type">Bool</span>
+            <span class="param-desc">SHA-256 verify data on every read. Corrupted files are auto-deleted. Default true.</span>
+        </div>
+    </div>
+
+    <h2>Directory Layout</h2>
+    <p>Files are sharded by the first two hex characters of the CID into 256 subdirectories:</p>
+
+    <div class="diagram">&lt;directory&gt;/
+├── 00/
+│   └── 00a3f7b2...64chars...
+├── 01/
+│   └── 01e8c4d1...64chars...
+├── ...
+├── ff/
+│   └── ff29b10c...64chars...
+├── .bloom        ← serialized Bloom filter
+└── .sizes        ← JSON map of CID → byte size</div>
+
+    <h2>Methods</h2>
+
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Behavior</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>has(cid:)</code></td>
+                <td>Bloom filter check first (~80ns for definite miss). Falls back to <code>access()</code> syscall on Bloom "maybe".</td>
+            </tr>
+            <tr>
+                <td><code>getLocal(cid:)</code> <span class="badge async">async</span></td>
+                <td>Bloom filter → read file → optional SHA-256 verify → return data. Auto-deletes corrupted files.</td>
+            </tr>
+            <tr>
+                <td><code>storeLocal(cid:data:)</code> <span class="badge async">async</span></td>
+                <td>Write to temp file → atomic rename (POSIX). Triggers LFU eviction if needed. Updates Bloom filter.</td>
+            </tr>
+            <tr>
+                <td><code>delete(cid:)</code></td>
+                <td>Remove file from disk. Update cache, size tracking, and metrics.</td>
+            </tr>
+            <tr>
+                <td><code>persistState()</code></td>
+                <td>Serialize Bloom filter to <code>.bloom</code> and item sizes to <code>.sizes</code>. Enables fast restart.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Properties</h2>
+    <table>
+        <thead>
+            <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>metrics</code></td><td><code>CASMetrics</code></td><td>Hits, misses, stores, evictions, deletions, corruption detections</td></tr>
+            <tr><td><code>totalBytes</code></td><td><code>Int</code></td><td>Running total of all stored data on disk</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="bloom-filter">Bloom Filter</h2>
+    <p>DiskCASWorker uses a Bloom filter to avoid unnecessary filesystem calls. For CIDs that definitely don't exist on disk, the Bloom filter returns <code>false</code> in ~80 nanoseconds — avoiding a ~100µs disk seek.</p>
+
+    <ul>
+        <li><strong>False positive rate</strong>: 1% (configurable internally)</li>
+        <li><strong>Hash functions</strong>: Double hashing with FNV-1a + MurmurHash3</li>
+        <li><strong>Persistence</strong>: Serializable to disk via <code>persistState()</code></li>
+        <li><strong>Initialization</strong>: Loaded from <code>.bloom</code> file on init, or rebuilt by scanning existing files</li>
+    </ul>
+
+    <div class="callout warn">
+        <div class="callout-title">Bloom filter false positives</div>
+        A Bloom filter can say "maybe" when a CID doesn't exist, but never says "no" when it does. False positives cause an unnecessary <code>access()</code> syscall, but never data loss.
+    </div>
+
+    <h2>Integrity Verification</h2>
+    <p>When <code>verifyReads</code> is <code>true</code> (the default), every <code>getLocal()</code> recomputes the SHA-256 hash of the file contents and compares it to the CID. If they don't match:</p>
+    <ol>
+        <li>The corrupted file is deleted from disk</li>
+        <li><code>metrics.corruptionDetections</code> is incremented</li>
+        <li>The method returns <code>nil</code> (as if the data doesn't exist)</li>
+    </ol>
+    <p>This catches bit rot, incomplete writes, and filesystem corruption automatically.</p>
+
+    <h2>Atomic Writes</h2>
+    <p>Stores use the POSIX temp-file + rename pattern:</p>
+    <ol>
+        <li>Write data to a temporary file in the shard directory</li>
+        <li>Call <code>rename()</code> to atomically move it to the final path</li>
+    </ol>
+    <p>This guarantees that <code>getLocal()</code> never reads a partially-written file, even during crashes.</p>
+
+    <h2 id="filesystem">FileSystemProvider Protocol</h2>
+    <p>DiskCASWorker is generic over filesystem implementation for testability:</p>
+
+    <pre><code><span class="kw">public protocol</span> <span class="ty">FileSystemProvider</span>: <span class="ty">Sendable</span> {
+    <span class="kw">func</span> <span class="fn">fileExists</span>(atPath: <span class="ty">String</span>) -> <span class="ty">Bool</span>
+    <span class="kw">func</span> <span class="fn">createDirectory</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span>
+    <span class="kw">func</span> <span class="fn">contentsOfFile</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span> -> <span class="ty">Data</span>
+    <span class="kw">func</span> <span class="fn">writeFile</span>(_ data: <span class="ty">Data</span>, toPath: <span class="ty">String</span>) <span class="kw">throws</span>
+    <span class="kw">func</span> <span class="fn">removeItem</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span>
+    <span class="kw">func</span> <span class="fn">contentsOfDirectory</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span> -> [<span class="ty">String</span>]
+    <span class="kw">func</span> <span class="fn">fileSize</span>(atPath: <span class="ty">String</span>) -> <span class="ty">Int</span>?
+}</code></pre>
+
+    <h3>DefaultFileSystem</h3>
+    <p>The production implementation uses raw POSIX syscalls (<code>open</code>, <code>read</code>, <code>write</code>, <code>rename</code>, <code>unlink</code>, <code>stat</code>, <code>access</code>) for maximum performance, bypassing Foundation's file I/O overhead.</p>
+
+    <h2>State Persistence</h2>
+    <p><code>persistState()</code> writes two files to the cache directory:</p>
+    <ul>
+        <li><strong><code>.bloom</code></strong>: Binary-serialized Bloom filter. Avoids O(n) filesystem scan on next init.</li>
+        <li><strong><code>.sizes</code></strong>: JSON dictionary mapping CID strings to byte sizes. Restores <code>totalBytes</code> tracking.</li>
+    </ul>
+    <p>If these files exist on init, the worker loads them in O(1). If missing, it falls back to scanning all shard directories.</p>
+
+    <h2>CASMetrics</h2>
+    <pre><code><span class="kw">public struct</span> <span class="ty">CASMetrics</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span> {
+    <span class="kw">public var</span> hits: <span class="ty">Int</span>
+    <span class="kw">public var</span> misses: <span class="ty">Int</span>
+    <span class="kw">public var</span> stores: <span class="ty">Int</span>
+    <span class="kw">public var</span> evictions: <span class="ty">Int</span>
+    <span class="kw">public var</span> deletions: <span class="ty">Int</span>
+    <span class="kw">public var</span> corruptionDetections: <span class="ty">Int</span>
+}</code></pre>
+    <p>DiskWorker's CASMetrics includes an additional <code>corruptionDetections</code> field not present in MemoryWorker's version.</p>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>
