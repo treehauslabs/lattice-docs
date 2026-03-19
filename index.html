@@ -29,6 +29,7 @@
     <nav>
         <a href="index.html">Overview</a>
         <a href="architecture.html">Architecture</a>
+        <a href="lattice.html">Lattice</a>
         <a href="cashew.html">Cashew</a>
         <a href="acorn.html">Acorn</a>
         <a href="tally.html">Tally</a>
@@ -42,8 +43,10 @@
     <a href="architecture.html">Architecture</a>
     <a href="quickstart.html">Quick Start</a>
 
-    <div class="section-title">Data Structures</div>
-    <a href="cashew.html">Cashew</a>
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+
+        <a href="cashew.html">Cashew</a>
 
         <a href="acorn.html">Acorn</a>
     <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
@@ -103,6 +106,11 @@
         </thead>
         <tbody>
             <tr>
+                <td><a href="lattice.html"><strong>Lattice</strong></a></td>
+                <td>The blockchain itself. Hierarchical proof-of-work with merged mining, cross-chain transfers via Merkle proof, and per-chain consensus with parent-anchored fork choice.</td>
+                <td><code>Block</code>, <code>ChainSpec</code>, <code>Transaction</code>, <code>LatticeState</code>, <code>ChainState</code>, <code>LatticeNode</code></td>
+            </tr>
+            <tr>
                 <td><a href="cashew.html"><strong>Cashew</strong></a></td>
                 <td>Merkle data structures. Dictionaries, arrays, and sets that are content-addressed, lazily loadable, selectively encryptable, diffable, and provable. The foundational state layer.</td>
                 <td><code>MerkleDictionary</code>, <code>MerkleArray</code>, <code>MerkleSet</code>, <code>Node</code>, <code>Header</code></td>
@@ -155,6 +163,8 @@
     <h2>Dependency Graph</h2>
 
     <div class="diagram">┌──────────┐
+│ Lattice  │ ─── UInt256, CollectionConcurrencyKit
+├──────────┤
 │   Ivy    │ ─── swift-nio
 ├──────────┤
 │  Tally   │ ─── swift-crypto

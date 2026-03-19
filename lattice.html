@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lattice Blockchain — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="lattice.html#blocks" class="nested">Blocks</a>
+    <a href="lattice.html#chainspec" class="nested">Chain Spec</a>
+    <a href="lattice.html#transactions" class="nested">Transactions</a>
+    <a href="lattice.html#state" class="nested">World State</a>
+    <a href="lattice.html#actions" class="nested">Actions</a>
+    <a href="lattice.html#merged-mining" class="nested">Merged Mining</a>
+    <a href="lattice.html#cross-chain" class="nested">Cross-Chain Transfers</a>
+    <a href="lattice.html#consensus" class="nested">Consensus</a>
+    <a href="lattice.html#mining" class="nested">Mining</a>
+    <a href="lattice.html#network" class="nested">Network</a>
+    <a href="lattice.html#persistence" class="nested">Persistence</a>
+
+    <div class="section-title">Data Structures</div>
+    <a href="cashew.html">Cashew</a>
+
+    <div class="section-title">Core</div>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Lattice Blockchain <span class="pkg-badge" style="background: rgba(34, 211, 238, 0.12); color: #22d3ee;">Blockchain</span></h1>
+    <p class="subtitle">A hierarchical proof-of-work blockchain with merged mining. Child chains inherit parent security without splitting hashrate. Cross-chain transfers are verified by Merkle proof — no bridges, no multisigs, no trust.</p>
+
+    <div class="callout info">
+        <div class="callout-title">The core idea</div>
+        Traditional multi-chain architectures divide security: each chain has its own miners and its own hashrate. Lattice inverts this. A single proof of work secures the nexus chain and all its children simultaneously. Adding a child chain adds throughput without reducing security. The parent's block literally contains the child's block — merged mining is structural, not optional.
+    </div>
+
+    <h2 id="blocks">Blocks</h2>
+    <p>A Lattice block is a Cashew Merkle structure containing transactions, state roots, child blocks, and proof-of-work metadata.</p>
+
+    <pre><code><span class="kw">struct</span> <span class="ty">Block</span>: <span class="ty">Node</span> {
+    <span class="kw">var</span> previousBlock: <span class="ty">HeaderImpl</span>&lt;<span class="ty">Block</span>&gt;?
+    <span class="kw">var</span> transactions: <span class="ty">MerkleDictionaryImpl</span>&lt;<span class="ty">Transaction</span>&gt;
+    <span class="kw">var</span> difficulty: <span class="ty">UInt256</span>
+    <span class="kw">var</span> nextDifficulty: <span class="ty">UInt256</span>
+    <span class="kw">var</span> spec: <span class="ty">HeaderImpl</span>&lt;<span class="ty">ChainSpec</span>&gt;
+    <span class="kw">var</span> homestead: <span class="ty">HeaderImpl</span>&lt;<span class="ty">LatticeState</span>&gt;    <span class="cm">// state before execution</span>
+    <span class="kw">var</span> frontier: <span class="ty">HeaderImpl</span>&lt;<span class="ty">LatticeState</span>&gt;     <span class="cm">// state after execution</span>
+    <span class="kw">var</span> childBlocks: <span class="ty">MerkleDictionaryImpl</span>&lt;<span class="ty">Block</span>&gt; <span class="cm">// merged-mined children</span>
+    <span class="kw">var</span> parentHomestead: <span class="ty">HeaderImpl</span>&lt;<span class="ty">LatticeState</span>&gt;?
+    <span class="kw">var</span> index: <span class="ty">UInt64</span>
+    <span class="kw">var</span> timestamp: <span class="ty">Int64</span>
+    <span class="kw">var</span> nonce: <span class="ty">UInt256</span>
+}</code></pre>
+
+    <p>Because blocks are Cashew <code>Node</code>s, they are content-addressed (every block has a unique CID), lazily loadable (you can reference a block by CID without having its full data), and recursively storable in the Acorn CAS chain.</p>
+
+    <h3>Block Types</h3>
+    <table>
+        <thead>
+            <tr><th>Type</th><th>Description</th><th>Constraints</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Genesis</strong></td>
+                <td>First block of any chain. No previous block, index 0.</td>
+                <td>No withdrawals. Can contain deposits and genesis actions.</td>
+            </tr>
+            <tr>
+                <td><strong>Nexus</strong></td>
+                <td>Block on the root chain (the nexus).</td>
+                <td>No deposits or withdrawals. Standalone proof of work.</td>
+            </tr>
+            <tr>
+                <td><strong>Child</strong></td>
+                <td>Block on a child chain, embedded in a parent block's <code>childBlocks</code>.</td>
+                <td>Timestamp must match parent. Inherits parent's filter rules.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Validation Pipeline</h3>
+    <p>Every block passes through a multi-stage validation:</p>
+    <ol>
+        <li><strong>Structural</strong>: Index sequential, timestamp not in future, spec matches</li>
+        <li><strong>Difficulty</strong>: <code>difficulty &ge; getDifficultyHash()</code> — the block's hash meets the work requirement</li>
+        <li><strong>Transactions</strong>: All signatures valid, all nonces correct, count within spec limits</li>
+        <li><strong>State</strong>: Execute all actions against homestead; computed frontier must match declared frontier</li>
+        <li><strong>Spec limits</strong>: State growth within <code>maxStateGrowth</code>, block size within <code>maxBlockSize</code></li>
+        <li><strong>Balances</strong>: Total balance changes = block reward + deposits - withdrawals (conservation of value)</li>
+    </ol>
+
+    <h2 id="chainspec">ChainSpec</h2>
+    <p>The economic and consensus parameters for a chain. Immutable once the chain launches.</p>
+
+    <pre><code><span class="kw">struct</span> <span class="ty">ChainSpec</span>: <span class="ty">Node</span> {
+    <span class="kw">var</span> premine: <span class="ty">Int</span>                         <span class="cm">// blocks by founders before public mining</span>
+    <span class="kw">var</span> initialRewardExponent: <span class="ty">Int</span>           <span class="cm">// block reward = 2^exponent</span>
+    <span class="kw">var</span> halvingInterval: <span class="ty">Int</span>                 <span class="cm">// blocks between reward halvings</span>
+    <span class="kw">var</span> targetBlockTime: <span class="ty">Int</span>                 <span class="cm">// milliseconds between blocks</span>
+    <span class="kw">var</span> difficultyAdjustmentWindow: <span class="ty">Int</span>     <span class="cm">// blocks averaged for difficulty</span>
+    <span class="kw">var</span> maxDifficultyChange: <span class="ty">Int</span>             <span class="cm">// max 2x increase or decrease</span>
+    <span class="kw">var</span> maxNumberOfTransactionsPerBlock: <span class="ty">Int</span>
+    <span class="kw">var</span> maxStateGrowth: <span class="ty">Int</span>                  <span class="cm">// max bytes of state changes per block</span>
+    <span class="kw">var</span> maxBlockSize: <span class="ty">Int</span>                    <span class="cm">// max serialized block bytes</span>
+    <span class="kw">var</span> filter: <span class="ty">String</span>?                      <span class="cm">// JavaScript validator for transactions</span>
+    <span class="kw">var</span> actionFilter: <span class="ty">String</span>?               <span class="cm">// JavaScript validator for actions</span>
+}</code></pre>
+
+    <h3>Block Reward</h3>
+    <p>Rewards follow a halving schedule similar to Bitcoin:</p>
+    <pre><code>baseReward = 2^initialRewardExponent
+halvings = (blockIndex - premine) / halvingInterval
+reward = baseReward >> halvings</code></pre>
+    <p>When <code>halvings &ge; 64</code>, the reward is zero. The geometric series is designed so total supply asymptotically approaches <code>UInt64.max</code>.</p>
+
+    <h3>Difficulty Adjustment</h3>
+    <p>Difficulty adjusts to maintain the target block time using a windowed average of recent block timestamps:</p>
+    <ol>
+        <li>Compute actual time for the last <code>difficultyAdjustmentWindow</code> blocks</li>
+        <li>Compare to expected time (<code>window × targetBlockTime</code>)</li>
+        <li>Scale difficulty proportionally, clamped to <code>maxDifficultyChange</code> (max 2x up or down)</li>
+    </ol>
+
+    <h3>Predefined Specs</h3>
+    <table>
+        <thead>
+            <tr><th>Spec</th><th>Block Time</th><th>Reward</th><th>Adjustment Window</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>.bitcoin</code></td><td>10 min</td><td>2<sup>10</sup> = 1024</td><td>2016 blocks</td></tr>
+            <tr><td><code>.ethereum</code></td><td>12 sec</td><td>2<sup>18</sup> = 262144</td><td>256 blocks</td></tr>
+            <tr><td><code>.development</code></td><td>1 sec</td><td>2<sup>10</sup> = 1024</td><td>20 blocks</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="transactions">Transactions</h2>
+    <p>Transactions are signed bundles of actions that modify world state.</p>
+
+    <pre><code><span class="kw">struct</span> <span class="ty">Transaction</span>: <span class="ty">Node</span> {
+    <span class="kw">var</span> signatures: [<span class="ty">String</span>: <span class="ty">String</span>]  <span class="cm">// publicKeyHex → signatureHex</span>
+    <span class="kw">var</span> body: <span class="ty">HeaderImpl</span>&lt;<span class="ty">TransactionBody</span>&gt;
+}
+
+<span class="kw">struct</span> <span class="ty">TransactionBody</span>: <span class="ty">Node</span> {
+    <span class="kw">var</span> accountActions: [<span class="ty">AccountAction</span>]
+    <span class="kw">var</span> actions: [<span class="ty">Action</span>]
+    <span class="kw">var</span> depositActions: [<span class="ty">DepositAction</span>]
+    <span class="kw">var</span> withdrawalActions: [<span class="ty">WithdrawalAction</span>]
+    <span class="kw">var</span> genesisActions: [<span class="ty">GenesisAction</span>]
+    <span class="kw">var</span> peerActions: [<span class="ty">PeerAction</span>]
+    <span class="kw">var</span> receiptActions: [<span class="ty">ReceiptAction</span>]
+    <span class="kw">var</span> signers: [<span class="ty">String</span>]   <span class="cm">// public keys that signed</span>
+    <span class="kw">var</span> fee: <span class="ty">UInt64</span>
+    <span class="kw">var</span> nonce: <span class="ty">UInt64</span>       <span class="cm">// replay protection</span>
+}</code></pre>
+
+    <h3>Signature Verification</h3>
+    <p>Transactions use P256 ECDSA signatures. Each signer's public key maps to their signature over the transaction body's CID. Multi-signature transactions are natively supported — multiple signers can authorize the same transaction.</p>
+
+    <h2 id="state">World State</h2>
+    <p><code>LatticeState</code> is an 8-component Merkle tree representing all state on a chain. Each component is a <code>MerkleDictionary</code>.</p>
+
+    <div class="diagram">LatticeState (root CID)
+├── AccountState      balances: owner → UInt64
+├── GeneralState      application KV: key → value
+├── DepositState      cross-chain deposits pending
+├── WithdrawalState   cross-chain withdrawals pending
+├── GenesisState      child chain genesis blocks: directory → Block
+├── PeerState         P2P peers: owner → (IP, fullNode, refreshed)
+├── ReceiptState      withdrawal receipts: composite-key → withdrawer
+└── TransactionState  committed txs: (signers:nonce) → tx CID</div>
+
+    <p>State transitions are deterministic: given a homestead (state before) and a set of transactions, the frontier (state after) is uniquely determined. This is how nodes independently verify blocks without trusting anyone.</p>
+
+    <h3>State Proofs</h3>
+    <p>Because every state component is a Cashew Merkle structure, you can generate <strong>sparse Merkle proofs</strong> for any state claim. For example: "Alice's balance at block 50,000 was 1,000 tokens" can be proven with a proof containing only the path from the state root to Alice's account entry — a few hundred bytes regardless of how many accounts exist.</p>
+
+    <h2 id="actions">Actions</h2>
+    <p>Actions are the atomic operations within transactions. Each action type modifies a specific component of world state.</p>
+
+    <table>
+        <thead>
+            <tr><th>Action</th><th>State Component</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>AccountAction</code></td>
+                <td>AccountState</td>
+                <td>Balance transfers. Specifies owner, old balance, new balance. Creates or deletes accounts.</td>
+            </tr>
+            <tr>
+                <td><code>Action</code></td>
+                <td>GeneralState</td>
+                <td>Generic key-value state changes. Application-level storage.</td>
+            </tr>
+            <tr>
+                <td><code>DepositAction</code></td>
+                <td>DepositState</td>
+                <td>Records a cross-chain deposit request. Only valid in genesis blocks.</td>
+            </tr>
+            <tr>
+                <td><code>WithdrawalAction</code></td>
+                <td>WithdrawalState</td>
+                <td>Initiates a cross-chain withdrawal. Only valid on child chains.</td>
+            </tr>
+            <tr>
+                <td><code>ReceiptAction</code></td>
+                <td>ReceiptState</td>
+                <td>Records proof of a withdrawal on the parent chain.</td>
+            </tr>
+            <tr>
+                <td><code>GenesisAction</code></td>
+                <td>GenesisState</td>
+                <td>Creates a new child chain by embedding its genesis block.</td>
+            </tr>
+            <tr>
+                <td><code>PeerAction</code></td>
+                <td>PeerState</td>
+                <td>Registers, updates, or removes a P2P peer endpoint on-chain.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>State Delta Tracking</h3>
+    <p>Every action declares its state delta (bytes added or removed). The total delta across all actions in a block must be within <code>maxStateGrowth</code>. This prevents state bloat attacks.</p>
+
+    <h2 id="merged-mining">Merged Mining</h2>
+    <p>Lattice's defining feature. Parent blocks structurally contain child blocks — no auxiliary proof needed.</p>
+
+    <div class="diagram">Nexus Block #1000
+├── transactions: [...]
+├── frontier: (nexus state root)
+├── nonce: 0x3a7f...         ← single proof of work
+│
+└── childBlocks:
+    ├── "defi-chain" → Child Block
+    │   ├── transactions: [...]
+    │   ├── frontier: (defi state root)
+    │   └── timestamp: must match parent
+    │
+    └── "nft-chain" → Child Block
+        ├── transactions: [...]
+        ├── frontier: (nft state root)
+        └── timestamp: must match parent</code></pre></div>
+
+    <h3>How It Works</h3>
+    <ol>
+        <li>A miner builds a nexus block template with transactions</li>
+        <li>The miner also builds child block templates for each child chain they want to mine</li>
+        <li>Child blocks are inserted into the nexus block's <code>childBlocks</code> Merkle dictionary</li>
+        <li>The miner finds a nonce that satisfies the nexus difficulty</li>
+        <li><strong>One proof of work secures all blocks simultaneously</strong></li>
+    </ol>
+
+    <h3>Isolation Property</h3>
+    <p>An invalid child block does <strong>not</strong> invalidate its parent. Child blocks are validated independently. If a child block fails validation, it's simply ignored — the parent block remains valid. This means a bug or attack on one child chain cannot compromise the nexus or any other child chain.</p>
+
+    <h3>Child Chain Creation</h3>
+    <p>New child chains are created via <code>GenesisAction</code>. The genesis block of the child chain is embedded in a nexus transaction, and the child chain's <code>ChainSpec</code> is locked at creation. The child chain inherits the parent's filter rules in addition to its own.</p>
+
+    <h2 id="cross-chain">Cross-Chain Transfers</h2>
+    <p>Lattice supports trustless cross-chain transfers via a deposit/withdrawal/receipt cycle. No bridges, no multisigs, no oracles.</p>
+
+    <div class="diagram">1. DEPOSIT (nexus genesis)
+   Nexus DepositState: record demand for tokens on child chain
+
+2. WITHDRAWAL (child chain)
+   Child WithdrawalState: claim tokens, referencing deposit proof
+
+3. RECEIPT (parent chain)
+   Parent ReceiptState: record that withdrawal was processed
+
+All steps verified by Merkle proof against the respective state roots.</div>
+
+    <h3>The Flow</h3>
+    <ol>
+        <li><strong>Deposit</strong>: A <code>DepositAction</code> in the child chain's genesis block records the deposit demand (who wants tokens and how many)</li>
+        <li><strong>Withdrawal</strong>: A <code>WithdrawalAction</code> on the child chain claims tokens, providing proof that the deposit exists in the parent state</li>
+        <li><strong>Receipt</strong>: A <code>ReceiptAction</code> on the parent chain records proof that the withdrawal was processed on the child chain</li>
+    </ol>
+
+    <p>Each step is verified by Merkle proof against the respective state root. The parent block contains the child block, so the parent node can verify the child's state root directly. No external validator or bridge contract is needed.</p>
+
+    <h2 id="consensus">Consensus: Fork Choice</h2>
+    <p><code>ChainState</code> manages the consensus logic for each chain, tracking all known blocks and determining the canonical chain.</p>
+
+    <h3>Fork Choice Rule</h3>
+    <p>Lattice uses a two-tier fork choice rule:</p>
+    <ol>
+        <li><strong>Parent chain anchoring</strong> (primary): A child block anchored by an earlier parent block wins. If block A's parent is at nexus height 1000 and block B's parent is at nexus height 1001, block A wins — regardless of child chain length.</li>
+        <li><strong>Longest chain</strong> (tiebreaker): If parent anchoring is tied, the longer chain wins (more cumulative work).</li>
+    </ol>
+
+    <div class="callout info">
+        <div class="callout-title">Why parent anchoring matters</div>
+        Parent anchoring means child chain consensus inherits nexus finality. Once a nexus block is deeply buried, the child blocks it contains are final too. An attacker would need to reorg the nexus to reorg any child chain — and the nexus has the full network hashrate behind it.
+    </div>
+
+    <h3>Reorganization</h3>
+    <p>When a fork accumulates more work than the current main chain:</p>
+    <ol>
+        <li>Find the common ancestor between the current tip and the fork</li>
+        <li>Remove blocks from the current tip back to the ancestor</li>
+        <li>Add blocks from the fork on top of the ancestor</li>
+        <li>Recursively propagate the reorg to all affected child chains</li>
+    </ol>
+    <p>Reorgs cascade: if a nexus reorg removes a block that contained child blocks, those child blocks are also removed from their respective chains.</p>
+
+    <h3>Pruning</h3>
+    <p>Consensus state keeps only the most recent 1000 blocks (configurable). Older blocks are pruned from the working set but remain available in the Acorn CAS chain for historical queries.</p>
+
+    <h2 id="mining">Mining</h2>
+    <p><code>MinerLoop</code> is the async mining engine that builds blocks and searches for valid nonces.</p>
+
+    <pre><code><span class="cm">// Simplified mining loop</span>
+<span class="kw">while</span> running {
+    <span class="kw">let</span> tip = <span class="kw">await</span> chain.tip()
+    <span class="kw">let</span> txs = mempool.selectTransactions(limit: spec.maxNumberOfTransactionsPerBlock)
+    <span class="kw">let</span> template = <span class="kw">try</span> <span class="ty">BlockBuilder</span>.extend(previous: tip, transactions: txs)
+
+    <span class="cm">// Batch nonce iteration (10,000 per yield)</span>
+    <span class="kw">for</span> batch <span class="kw">in</span> <span class="num">0</span>..&lt;batchCount {
+        <span class="kw">if let</span> block = template.mine(batchSize: <span class="num">10_000</span>) {
+            <span class="kw">await</span> network.broadcastBlock(block)
+            <span class="kw">break</span>
+        }
+        <span class="kw">await</span> <span class="ty">Task</span>.yield() <span class="cm">// stay responsive</span>
+    }
+}</code></pre>
+
+    <h3>Block Building</h3>
+    <p><code>BlockBuilder</code> constructs block templates:</p>
+    <ol>
+        <li>Carry forward the previous block's frontier as the new homestead</li>
+        <li>Pack transactions selected from the mempool (sorted by fee)</li>
+        <li>Execute all actions to compute the frontier state root</li>
+        <li>Include child block templates in the <code>childBlocks</code> dictionary</li>
+        <li>Set difficulty from the previous block's <code>nextDifficulty</code></li>
+    </ol>
+
+    <h2 id="network">Network Layer</h2>
+    <p><code>LatticeNode</code> is the full node implementation that ties everything together.</p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">LatticeNode</span> {
+    <span class="cm">// One ChainNetwork per chain (nexus + all children)</span>
+    <span class="kw">var</span> networks: [<span class="ty">String</span>: <span class="ty">ChainNetwork</span>]
+    <span class="kw">var</span> lattice: <span class="ty">Lattice</span>
+}</code></pre>
+
+    <h3>ChainNetwork</h3>
+    <p>Each chain (nexus and every child) gets its own <code>ChainNetwork</code> wrapping an Ivy node:</p>
+    <ul>
+        <li><strong>Block propagation</strong>: Store locally in Acorn disk cache, gossip CID to peers</li>
+        <li><strong>Block fetching</strong>: Lazily resolve block data from peers via Acorn's <code>CompositeCASWorker</code></li>
+        <li><strong>Mempool</strong>: Per-chain transaction pool with fee-based eviction (10,000 tx capacity)</li>
+        <li><strong>Discovery</strong>: Bootstrap peers + on-chain <code>PeerState</code> for peer endpoints</li>
+    </ul>
+
+    <h3>Mempool</h3>
+    <pre><code><span class="kw">struct</span> <span class="ty">Mempool</span> {
+    <span class="kw">func</span> <span class="fn">add</span>(_ tx: <span class="ty">Transaction</span>) -> <span class="ty">Bool</span>
+    <span class="kw">func</span> <span class="fn">selectTransactions</span>(limit: <span class="ty">Int</span>) -> [<span class="ty">Transaction</span>]  <span class="cm">// sorted by fee</span>
+    <span class="kw">func</span> <span class="fn">removeConfirmed</span>(_ txIDs: <span class="ty">Set</span>&lt;<span class="ty">String</span>&gt;)
+    <span class="kw">var</span> totalFees: <span class="ty">UInt64</span>
+}</code></pre>
+    <p>When full (10,000 transactions), the lowest-fee transaction is evicted to make room. Transactions expire after a configurable duration.</p>
+
+    <h2 id="persistence">Persistence</h2>
+    <p>Chain state is persisted to disk for crash recovery:</p>
+
+    <ul>
+        <li><strong>Block data</strong>: Stored in Acorn's <code>DiskCASWorker</code> (content-addressed, sharded, Bloom-filtered)</li>
+        <li><strong>Consensus state</strong>: Serialized as JSON every 100 blocks via <code>ChainStatePersister</code></li>
+        <li><strong>State snapshots</strong>: Periodic checkpoints of world state for fast sync</li>
+    </ul>
+
+    <p>On restart, the node loads persisted consensus state and resumes from the last checkpoint. Block data is lazily loaded from disk as needed.</p>
+
+    <h2>Cryptography</h2>
+    <table>
+        <thead>
+            <tr><th>Operation</th><th>Algorithm</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Key generation</td><td>P256 ECDSA</td></tr>
+            <tr><td>Transaction signing</td><td>P256 ECDSA</td></tr>
+            <tr><td>Content addressing</td><td>SHA-256 (via swift-crypto)</td></tr>
+            <tr><td>Address derivation</td><td><code>"1" + first32chars(SHA256(SHA256(publicKey)))</code></td></tr>
+            <tr><td>Difficulty hashing</td><td>SHA-256 of serialized block</td></tr>
+        </tbody>
+    </table>
+
+    <h2>Package Integration</h2>
+    <p>Lattice is the top-level package that brings the entire ecosystem together:</p>
+
+    <div class="chain-visual" style="flex-wrap: wrap; gap: 12px;">
+        <div class="chain-node" style="border-color: #22d3ee; color: #22d3ee; background: rgba(34,211,238,0.08);">Lattice<span class="chain-label">blockchain logic</span></div>
+        <span class="chain-arrow">uses</span>
+        <div class="chain-node" style="border-color: #f87171; color: #f87171; background: rgba(248,113,113,0.08);">Cashew<span class="chain-label">Merkle state</span></div>
+        <span class="chain-arrow">+</span>
+        <div class="chain-node disk">Acorn<span class="chain-label">CAS storage</span></div>
+        <span class="chain-arrow">+</span>
+        <div class="chain-node tally">Tally<span class="chain-label">peer reputation</span></div>
+        <span class="chain-arrow">+</span>
+        <div class="chain-node network">Ivy<span class="chain-label">P2P network</span></div>
+    </div>
+
+    <ul>
+        <li><strong>Cashew</strong>: All state (blocks, transactions, world state) is Cashew Merkle structures</li>
+        <li><strong>Acorn + DiskWorker</strong>: Content-addressed storage for blocks and state nodes</li>
+        <li><strong>Ivy</strong>: Per-chain P2P networking for block/transaction gossip and peer discovery</li>
+        <li><strong>Tally</strong>: Peer reputation for routing and rate limiting at the network layer</li>
+    </ul>
+</main>
+
+<footer class="site-footer">
+    <span>&copy; 2025 Treehaus Labs</span>
+    <span><a href="https://github.com/treehauslabs">GitHub</a></span>
+</footer>
+
+<script src="js/nav.js"></script>
+</body>
+</html>
