@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lattice Explorer — Lattice Docs</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+    <a href="index.html" class="logo">
+        <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="6" r="4" fill="#22d3ee"/><circle cx="6" cy="22" r="3" fill="#a78bfa"/><circle cx="16" cy="22" r="3" fill="#a78bfa"/><circle cx="26" cy="22" r="3" fill="#a78bfa"/><line x1="16" y1="10" x2="6" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="16" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/><line x1="16" y1="10" x2="26" y2="19" stroke="#22d3ee" stroke-width="1.5" opacity="0.5"/></svg>
+        Lattice <span class="dim">Docs</span>
+    </a>
+    <button class="mobile-menu-btn" aria-label="Menu">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h14M3 10h14M3 14h14"/></svg>
+    </button>
+    <nav>
+        <a href="index.html">Overview</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="roadmap.html">Roadmap</a>
+        <a href="lattice.html">Lattice</a>
+        <a href="cashew.html">Cashew</a>
+        <a href="acorn.html">Acorn</a>
+        <a href="tally.html">Tally</a>
+        <a href="ivy.html">Ivy</a>
+    </nav>
+</header>
+
+<aside class="sidebar">
+    <div class="section-title">Getting Started</div>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="quickstart.html">Quick Start</a>
+    <a href="tutorials.html">Tutorials</a>
+    <a href="roadmap.html">Roadmap</a>
+
+    <div class="section-title">Tools</div>
+    <a href="gateway.html">Gateway</a>
+    <a href="explorer.html" class="active">Explorer</a>
+    <a href="cli.html">CLI</a>
+    <a href="wallet.html">Wallet</a>
+
+    <div class="section-title">Blockchain</div>
+    <a href="lattice.html">Lattice</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
+
+    <div class="section-title">Storage</div>
+    <a href="memory-worker.html">Memory Worker</a>
+    <a href="disk-worker.html">Disk Worker</a>
+
+    <div class="section-title">Reputation</div>
+    <a href="tally.html">Tally</a>
+
+    <div class="section-title">Networking</div>
+    <a href="ivy.html">Ivy</a>
+</aside>
+
+<main class="main">
+    <h1>Lattice Explorer</h1>
+    <p class="subtitle">A web-based block explorer for inspecting chains, blocks, and the lattice tree hierarchy. Connects to a <a href="gateway.html">lattice-gateway</a> JSON-RPC endpoint.</p>
+
+    <h2>Overview</h2>
+
+    <p>The explorer provides a visual interface for navigating any Lattice network. It can browse the nexus chain, discover child chains, and navigate the full lattice tree — switching context to view blocks, mempool state, and chain configuration on any chain in the hierarchy.</p>
+
+    <div class="callout info">
+        <div class="callout-title">No build step</div>
+        <p>The explorer is a single-page app with zero dependencies. Open <code>index.html</code> in a browser, point it at a running gateway, and you're exploring.</p>
+    </div>
+
+    <h2>Getting Started</h2>
+
+    <p>Clone the repo and open in a browser:</p>
+
+    <pre><code><span class="kw">git</span> clone https://github.com/treehauslabs/lattice-explorer.git
+<span class="kw">cd</span> lattice-explorer
+<span class="kw">open</span> index.html</code></pre>
+
+    <p>Or serve it locally:</p>
+
+    <pre><code>python3 -m http.server 8080
+<span class="cm"># visit http://localhost:8080</span></code></pre>
+
+    <p>Enter the gateway URL (default <code>http://127.0.0.1:8545</code>) and click <strong>Connect</strong>. The explorer polls the gateway every 5 seconds to keep data fresh.</p>
+
+    <h2>Lattice Tree Navigation</h2>
+
+    <p>The core feature: browsing the full chain hierarchy from a single interface.</p>
+
+    <p>When connected to a nexus chain, the <strong>Lattice Tree</strong> section lists all child chains discovered via <code>lattice_getChildChains</code>. Each entry shows:</p>
+
+    <ul>
+        <li><strong>Chain ID</strong> — clickable; switches the explorer to that child chain</li>
+        <li><strong>Height</strong> — current block height on the child chain</li>
+        <li><strong>Children</strong> — number of grandchild chains (lattice can nest arbitrarily deep)</li>
+    </ul>
+
+    <p>A breadcrumb trail at the top tracks your position: <code>Nexus / TokenLedger / ...</code>. Click any segment to jump back up the tree.</p>
+
+    <h2>Chain Context</h2>
+
+    <p>When you switch to a child chain, <em>everything</em> updates to reflect that chain's state:</p>
+
+    <table>
+        <tr><th>Section</th><th>What changes</th></tr>
+        <tr><td><strong>Network Overview</strong></td><td>Chain height, tip, and genesis hash for the selected chain</td></tr>
+        <tr><td><strong>Chain Spec</strong></td><td>Block time, max transactions, reward schedule for that chain</td></tr>
+        <tr><td><strong>Mempool</strong></td><td>Pending transactions scoped to the selected chain</td></tr>
+        <tr><td><strong>Latest Block</strong></td><td>Most recent block on the selected chain</td></tr>
+        <tr><td><strong>Block Browser</strong></td><td>Navigate blocks by index on the selected chain</td></tr>
+        <tr><td><strong>Lattice Tree</strong></td><td>Shows child chains of the currently selected chain</td></tr>
+        <tr><td><strong>RPC Console</strong></td><td>Sends commands scoped to the selected chain</td></tr>
+    </table>
+
+    <p>This means you can fully explore any child chain — its blocks, transactions, state — without switching tools or endpoints.</p>
+
+    <h2>Block Browser</h2>
+
+    <p>Two ways to navigate blocks on any chain:</p>
+
+    <h3>By Index</h3>
+    <p>The block browser provides <strong>First / Prev / Next / Latest</strong> controls. It calls <code>lattice_getBlockByIndex</code> with the current chain context and the selected index. This is the fastest way to walk through a chain's history.</p>
+
+    <h3>By Hash</h3>
+    <p>The block lookup section accepts a block hash and calls <code>lattice_getBlock</code>. All block hashes displayed in the explorer are clickable — clicking one populates the lookup field and fetches that block.</p>
+
+    <p>Block details include:</p>
+    <ul>
+        <li><strong>Block hash</strong> — clickable</li>
+        <li><strong>Block index</strong></li>
+        <li><strong>Previous block hash</strong> — clickable, lets you walk backwards through the chain</li>
+        <li><strong>On main chain</strong> — whether this block is on the canonical chain</li>
+        <li><strong>Child block hashes</strong> — clickable, follow any fork or child block</li>
+        <li><strong>Child chain IDs</strong> — if this block spawned child chains, clickable to navigate to them</li>
+    </ul>
+
+    <h2>RPC Methods</h2>
+
+    <p>The explorer uses the following <a href="gateway.html">gateway</a> JSON-RPC methods:</p>
+
+    <table>
+        <tr><th>Method</th><th>Parameters</th><th>Description</th></tr>
+        <tr><td><code>lattice_nodeInfo</code></td><td><code>[chainId?]</code></td><td>Node info, chain height, tip, genesis hash</td></tr>
+        <tr><td><code>lattice_chainSpec</code></td><td><code>[chainId?]</code></td><td>Chain configuration</td></tr>
+        <tr><td><code>lattice_getMempoolInfo</code></td><td><code>[chainId?]</code></td><td>Pending transaction count and fees</td></tr>
+        <tr><td><code>lattice_getLatestBlock</code></td><td><code>[chainId?]</code></td><td>Latest block on the chain</td></tr>
+        <tr><td><code>lattice_getBlock</code></td><td><code>[blockHash]</code></td><td>Block by hash (cross-chain)</td></tr>
+        <tr><td><code>lattice_getBlockByIndex</code></td><td><code>[chainId?,] index</code></td><td>Block by index on a specific chain</td></tr>
+        <tr><td><code>lattice_getChildChains</code></td><td><code>[chainId?]</code></td><td>Child chains under a given chain</td></tr>
+        <tr><td><code>lattice_peerCount</code></td><td><code>[chainId?]</code></td><td>Connected peer count</td></tr>
+        <tr><td><code>lattice_generateKeyPair</code></td><td><code>[]</code></td><td>Generate a new keypair</td></tr>
+    </table>
+
+    <p>When a <code>chainId</code> is omitted, the method operates on the nexus chain. The explorer automatically prepends the current chain context to all RPC calls when viewing a child chain.</p>
+
+    <h2>Other Sections</h2>
+
+    <ul>
+        <li><strong>Network Overview</strong> — chain height, tip hash, genesis hash, peer count</li>
+        <li><strong>Node Info</strong> — public key, address, listen port</li>
+        <li><strong>Chain Spec</strong> — directory, block time, transaction limits, reward parameters</li>
+        <li><strong>Mempool</strong> — pending count and total fees</li>
+        <li><strong>Key Generator</strong> — generate keypairs via the gateway for testing</li>
+        <li><strong>RPC Console</strong> — select a method and send raw calls, scoped to the active chain</li>
+    </ul>
+
+    <h2>Source</h2>
+
+    <p>The explorer is a zero-dependency single-page app:</p>
+
+    <pre><code>lattice-explorer/
+  index.html   <span class="cm">— layout and sections</span>
+  app.js       <span class="cm">— RPC client, chain navigation, block browsing</span>
+  style.css    <span class="cm">— dark theme</span></code></pre>
+
+    <p><a href="https://github.com/treehauslabs/lattice-explorer">View on GitHub</a></p>
+</main>
+
+<script src="js/nav.js"></script>
+</body>
+</html>
