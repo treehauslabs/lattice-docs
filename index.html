@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lattice Docs — Technical Documentation</title>
-    <meta name="description" content="Technical documentation for the Lattice ecosystem: Acorn, AcornMemoryWorker, AcornDiskWorker, Tally, and Ivy.">
+    <title>Lattice — Peer-to-Peer Content-Addressable Storage</title>
+    <meta name="description" content="A modular Swift stack for peer-to-peer content-addressable storage: hierarchical blockchain, Merkle state, tiered CAS, reputation gating, and Kademlia networking.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -45,10 +45,8 @@
 
     <div class="section-title">Blockchain</div>
     <a href="lattice.html">Lattice</a>
-
-        <a href="cashew.html">Cashew</a>
-
-        <a href="acorn.html">Acorn</a>
+    <a href="cashew.html">Cashew</a>
+    <a href="acorn.html">Acorn</a>
     <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
     <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
     <a href="acorn.html#composite" class="nested">Composite Worker</a>
@@ -78,87 +76,211 @@
 </aside>
 
 <main class="main">
-    <h1>Lattice Documentation</h1>
-    <p class="subtitle">Technical reference for the Lattice content-addressable storage and peer-to-peer networking stack. Built in Swift 6 for Apple and Linux platforms.</p>
+    <div class="landing-hero">
+        <h1>Content-addressed storage for a decentralized world</h1>
+        <p class="tagline">Lattice is a modular Swift stack — seven packages that compose into a complete peer-to-peer blockchain with Merkle state, tiered CAS, reputation gating, and Kademlia networking.</p>
+        <div class="hero-actions">
+            <a href="quickstart.html" class="btn btn-primary">Quick Start</a>
+            <a href="architecture.html" class="btn btn-secondary">Architecture →</a>
+        </div>
+    </div>
 
-    <h2>The Ecosystem</h2>
-    <p>Lattice is a modular stack of Swift packages that together form a complete peer-to-peer content-addressable storage system. Each package has a single responsibility and can be used independently or composed into a full node.</p>
+    <div class="stats-strip">
+        <div class="stat">
+            <span class="stat-value"><span class="accent">7</span></span>
+            <span class="stat-label">Swift packages</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">~10<span class="accent">ns</span></span>
+            <span class="stat-label">sync memory reads</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">SHA-256</span>
+            <span class="stat-label">content addressing</span>
+        </div>
+        <div class="stat">
+            <span class="stat-value">Swift <span class="accent">6</span></span>
+            <span class="stat-label">strict concurrency</span>
+        </div>
+    </div>
 
-    <div class="chain-visual">
-        <div class="chain-node memory">MemoryWorker<span class="chain-label">nanoseconds</span></div>
-        <span class="chain-arrow">→</span>
-        <div class="chain-node disk">DiskWorker<span class="chain-label">microseconds</span></div>
-        <span class="chain-arrow">→</span>
-        <div class="chain-node tally">Tally<span class="chain-label">reputation gate</span></div>
-        <span class="chain-arrow">→</span>
-        <div class="chain-node network">Ivy<span class="chain-label">network fetch</span></div>
+    <h2>The Storage Chain</h2>
+    <p>Every piece of data flows through a tiered worker chain — fast to slow, local to remote. Misses walk forward; hits backfill backward. The chain self-optimizes without orchestration.</p>
+
+    <div class="arch-diagram">
+        <svg width="680" height="120" viewBox="0 0 680 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Memory -->
+            <rect x="0" y="20" width="140" height="80" rx="10" stroke="#34d399" stroke-width="1.5" fill="rgba(52,211,153,0.08)"/>
+            <text x="70" y="52" text-anchor="middle" fill="#34d399" font-family="system-ui" font-size="13" font-weight="700">MemoryWorker</text>
+            <text x="70" y="72" text-anchor="middle" fill="#34d399" font-family="monospace" font-size="11" opacity="0.7">~10 ns</text>
+            <!-- Arrow 1 -->
+            <path d="M148 60 L180 60" stroke="#7c829a" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <!-- Disk -->
+            <rect x="188" y="20" width="140" height="80" rx="10" stroke="#a78bfa" stroke-width="1.5" fill="rgba(167,139,250,0.08)"/>
+            <text x="258" y="52" text-anchor="middle" fill="#a78bfa" font-family="system-ui" font-size="13" font-weight="700">DiskWorker</text>
+            <text x="258" y="72" text-anchor="middle" fill="#a78bfa" font-family="monospace" font-size="11" opacity="0.7">~100 µs</text>
+            <!-- Arrow 2 -->
+            <path d="M336 60 L368 60" stroke="#7c829a" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <!-- Tally -->
+            <rect x="376" y="20" width="140" height="80" rx="10" stroke="#fbbf24" stroke-width="1.5" fill="rgba(251,191,36,0.06)"/>
+            <text x="446" y="52" text-anchor="middle" fill="#fbbf24" font-family="system-ui" font-size="13" font-weight="700">Tally</text>
+            <text x="446" y="72" text-anchor="middle" fill="#fbbf24" font-family="monospace" font-size="11" opacity="0.7">reputation gate</text>
+            <!-- Arrow 3 -->
+            <path d="M524 60 L556 60" stroke="#7c829a" stroke-width="1.5" marker-end="url(#arrow)"/>
+            <!-- Network -->
+            <rect x="564" y="20" width="114" height="80" rx="10" stroke="#22d3ee" stroke-width="1.5" fill="rgba(34,211,238,0.08)"/>
+            <text x="621" y="52" text-anchor="middle" fill="#22d3ee" font-family="system-ui" font-size="13" font-weight="700">Ivy</text>
+            <text x="621" y="72" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="11" opacity="0.7">~100 ms</text>
+            <!-- Backfill -->
+            <path d="M564 105 L140 105" stroke="#22d3ee" stroke-width="1" stroke-dasharray="4 3" opacity="0.4" marker-end="url(#arrow-cyan)"/>
+            <text x="352" y="118" text-anchor="middle" fill="#22d3ee" font-family="monospace" font-size="10" opacity="0.5">backfill on hit</text>
+            <!-- Arrow markers -->
+            <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c829a"/>
+                </marker>
+                <marker id="arrow-cyan" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#22d3ee" opacity="0.4"/>
+                </marker>
+            </defs>
+        </svg>
     </div>
 
     <h2>Packages</h2>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Package</th>
-                <th>Role</th>
-                <th>Key Types</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><a href="lattice.html"><strong>Lattice</strong></a></td>
-                <td>The blockchain itself. Hierarchical proof-of-work with merged mining, cross-chain transfers via Merkle proof, and per-chain consensus with parent-anchored fork choice.</td>
-                <td><code>Block</code>, <code>ChainSpec</code>, <code>Transaction</code>, <code>LatticeState</code>, <code>ChainState</code>, <code>LatticeNode</code></td>
-            </tr>
-            <tr>
-                <td><a href="cashew.html"><strong>Cashew</strong></a></td>
-                <td>Merkle data structures. Dictionaries, arrays, and sets that are content-addressed, lazily loadable, selectively encryptable, diffable, and provable. The foundational state layer.</td>
-                <td><code>MerkleDictionary</code>, <code>MerkleArray</code>, <code>MerkleSet</code>, <code>Node</code>, <code>Header</code></td>
-            </tr>
-            <tr>
-                <td><a href="acorn.html"><strong>Acorn</strong></a></td>
-                <td>Core protocol and primitives. Defines the <code>AcornCASWorker</code> actor protocol, <code>ContentIdentifier</code>, and the composite chain.</td>
-                <td><code>AcornCASWorker</code>, <code>ContentIdentifier</code>, <code>CompositeCASWorker</code>, <code>LFUDecayCache</code></td>
-            </tr>
-            <tr>
-                <td><a href="memory-worker.html"><strong>AcornMemoryWorker</strong></a></td>
-                <td>In-memory CAS with dual sync/async API. 3–28ns sync reads via lock-based hot path.</td>
-                <td><code>MemoryCASWorker</code>, <code>CASMetrics</code></td>
-            </tr>
-            <tr>
-                <td><a href="disk-worker.html"><strong>AcornDiskWorker</strong></a></td>
-                <td>Filesystem-backed CAS with Bloom filter fast rejection, POSIX I/O, and SHA-256 integrity verification.</td>
-                <td><code>DiskCASWorker</code>, <code>FileSystemProvider</code>, <code>CASMetrics</code></td>
-            </tr>
-            <tr>
-                <td><a href="tally.html"><strong>Tally</strong></a></td>
-                <td>Peer reputation and rate limiting. Bitswap-inspired debt ratios, sigmoid gating, proof-of-work challenges.</td>
-                <td><code>Tally</code>, <code>PeerLedger</code>, <code>Challenge</code>, <code>TallyConfig</code></td>
-            </tr>
-            <tr>
-                <td><a href="ivy.html"><strong>Ivy</strong></a></td>
-                <td>Peer-to-peer networking. Kademlia DHT, TCP transport via swift-nio, content routing, local discovery.</td>
-                <td><code>Ivy</code>, <code>Router</code>, <code>PeerConnection</code>, <code>Message</code>, <code>NetworkCASWorker</code></td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="pkg-grid">
+        <a href="lattice.html" class="pkg-card full-width">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--cyan)"></span>
+                <span class="pkg-card-name">Lattice</span>
+            </div>
+            <div class="pkg-card-desc">The blockchain itself. Hierarchical proof-of-work with merged mining, cross-chain transfers via Merkle proof, and parent-anchored fork choice consensus.</div>
+            <div class="pkg-card-types">
+                <code>Block</code><code>ChainSpec</code><code>Transaction</code><code>LatticeState</code><code>LatticeNode</code>
+            </div>
+        </a>
+        <a href="cashew.html" class="pkg-card full-width">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--purple)"></span>
+                <span class="pkg-card-name">Cashew</span>
+            </div>
+            <div class="pkg-card-desc">Merkle data structures — dictionaries, arrays, and sets that are content-addressed, lazily loadable, selectively encryptable, diffable, and provable. The foundational state layer.</div>
+            <div class="pkg-card-types">
+                <code>MerkleDictionary</code><code>MerkleArray</code><code>MerkleSet</code><code>Node</code><code>Header</code>
+            </div>
+        </a>
+        <a href="acorn.html" class="pkg-card">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--cyan)"></span>
+                <span class="pkg-card-name">Acorn</span>
+            </div>
+            <div class="pkg-card-desc">Core protocol and primitives. Defines the CAS worker actor protocol, content identifiers, the composite chain, and LFU decay cache.</div>
+            <div class="pkg-card-types">
+                <code>AcornCASWorker</code><code>ContentIdentifier</code><code>CompositeCASWorker</code>
+            </div>
+        </a>
+        <a href="memory-worker.html" class="pkg-card">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--green)"></span>
+                <span class="pkg-card-name">MemoryWorker</span>
+            </div>
+            <div class="pkg-card-desc">In-memory CAS with dual sync/async API. Lock-based hot path delivers 3–28ns reads, bypassing actor overhead.</div>
+            <div class="pkg-card-types">
+                <code>MemoryCASWorker</code><code>CASMetrics</code>
+            </div>
+        </a>
+        <a href="disk-worker.html" class="pkg-card">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--purple)"></span>
+                <span class="pkg-card-name">DiskWorker</span>
+            </div>
+            <div class="pkg-card-desc">Filesystem-backed CAS with Bloom filter fast rejection, POSIX I/O, and SHA-256 integrity verification on every read.</div>
+            <div class="pkg-card-types">
+                <code>DiskCASWorker</code><code>FileSystemProvider</code>
+            </div>
+        </a>
+        <a href="tally.html" class="pkg-card">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--amber)"></span>
+                <span class="pkg-card-name">Tally</span>
+            </div>
+            <div class="pkg-card-desc">Peer reputation and rate limiting. Reciprocity-based scoring with sigmoid gating and proof-of-work challenges for Sybil resistance.</div>
+            <div class="pkg-card-types">
+                <code>Tally</code><code>PeerLedger</code><code>Challenge</code>
+            </div>
+        </a>
+        <a href="ivy.html" class="pkg-card full-width">
+            <div class="pkg-card-header">
+                <span class="pkg-card-dot" style="background: var(--cyan)"></span>
+                <span class="pkg-card-name">Ivy</span>
+            </div>
+            <div class="pkg-card-desc">Peer-to-peer networking. Kademlia DHT routing, TCP transport via swift-nio, content routing, local discovery, and a binary wire protocol.</div>
+            <div class="pkg-card-types">
+                <code>Ivy</code><code>Router</code><code>PeerConnection</code><code>Message</code><code>NetworkCASWorker</code>
+            </div>
+        </a>
+    </div>
 
     <h2>Design Principles</h2>
 
-    <h3>Merkle State</h3>
-    <p>All state is represented as Cashew Merkle structures — content-addressed trees where every node is identified by the hash of its contents. This makes state inherently versioned (every mutation produces a new root), verifiable (any node can be checked against its CID), and efficiently syncable (two nodes with the same CID are identical, no comparison needed).</p>
+    <div class="principles">
+        <div class="principle">
+            <h3>
+                <span class="p-icon" style="background: var(--purple-glow); color: var(--purple);">⧫</span>
+                Merkle State
+            </h3>
+            <p>All state is Cashew Merkle trees. Every mutation produces a new root CID. State is inherently versioned, verifiable, and efficiently syncable.</p>
+        </div>
+        <div class="principle">
+            <h3>
+                <span class="p-icon" style="background: var(--cyan-glow); color: var(--cyan);">◎</span>
+                Content Addressing
+            </h3>
+            <p>All data identified by SHA-256 hash. Storage is inherently deduplicating, verifiable, and cacheable — same data, same CID, anywhere.</p>
+        </div>
+        <div class="principle">
+            <h3>
+                <span class="p-icon" style="background: var(--green-glow); color: var(--green);">⟁</span>
+                Actor Concurrency
+            </h3>
+            <p>Every worker is a Swift actor — compile-time data race safety. Sync hot paths bypass the executor via <code>OSAllocatedUnfairLock</code> for nanosecond reads.</p>
+        </div>
+        <div class="principle">
+            <h3>
+                <span class="p-icon" style="background: rgba(251,191,36,0.12); color: var(--amber);">⇶</span>
+                Worker Chaining
+            </h3>
+            <p>Workers link via <code>near</code>/<code>far</code> references. The default <code>get()</code> walks fast→slow, backfilling on hits. The chain self-optimizes.</p>
+        </div>
+    </div>
 
-    <h3>Actor-Based Concurrency</h3>
-    <p>Every storage worker is a Swift actor, providing compile-time data race safety. The <code>AcornCASWorker</code> protocol requires actor conformance, ensuring all implementations are thread-safe by construction.</p>
+    <h2>Quick Start</h2>
 
-    <h3>Content Addressing</h3>
-    <p>All data is identified by the SHA-256 hash of its contents. This makes storage inherently deduplicating, verifiable, and cacheable. A <code>ContentIdentifier</code> computed from data in Tokyo will be identical to one computed from the same data in London.</p>
+    <div class="quick-inline">
+        <div class="quick-header">
+            <h3>20 lines to a running chain</h3>
+            <a href="quickstart.html">Full guide →</a>
+        </div>
+        <pre><code><span class="kw">import</span> <span class="ty">Acorn</span>
+<span class="kw">import</span> <span class="ty">AcornMemoryWorker</span>
+<span class="kw">import</span> <span class="ty">AcornDiskWorker</span>
 
-    <h3>Worker Chaining</h3>
-    <p>Workers link together via <code>near</code> and <code>far</code> references, forming a storage hierarchy. The protocol's default <code>get()</code> implementation walks the chain from fast to slow, backfilling faster layers on hits. No orchestration code needed — the chain self-optimizes.</p>
+<span class="kw">let</span> memory = <span class="ty">MemoryCASWorker</span>()
+<span class="kw">let</span> disk = <span class="kw">await</span> <span class="ty">DiskCASWorker</span>(
+    directory: <span class="str">"/tmp/lattice"</span>,
+    near: memory
+)
+<span class="kw">let</span> composite = <span class="ty">CompositeCASWorker</span>(farthest: disk)
 
-    <h3>Cross-Platform</h3>
-    <p>All packages compile on both Apple platforms (macOS, iOS, tvOS, watchOS, visionOS) and Linux. Platform-specific APIs are conditionally compiled — <code>OSAllocatedUnfairLock</code> on Apple, <code>NSLock</code> on Linux; <code>Network.framework</code> discovery wrapped in <code>#if canImport(Network)</code>.</p>
+<span class="cm">// Store content-addressed data</span>
+<span class="kw">let</span> data = <span class="ty">Data</span>(<span class="str">"Hello, Lattice"</span>.utf8)
+<span class="kw">let</span> cid = <span class="kw">await</span> composite.<span class="fn">store</span>(data: data)
+
+<span class="cm">// Retrieve — walks memory → disk automatically</span>
+<span class="kw">let</span> result = <span class="kw">await</span> composite.<span class="fn">get</span>(cid: cid)
+<span class="cm">// First get: disk hit, backfills to memory</span>
+<span class="cm">// Second get: memory hit in ~10ns</span></code></pre>
+    </div>
 
     <h2>Dependency Graph</h2>
 
@@ -177,8 +299,6 @@
 ├──────────┤
 │  Cashew  │ ─── swift-crypto, swift-cid, ArrayTrie
 └──────────┘</div>
-
-    <p>Cashew is the foundational data structure layer — it defines how state is structured as Merkle trees. Acorn provides the storage protocol for persisting Cashew's content-addressed nodes. The storage workers (memory, disk) implement that protocol. Tally adds reputation. Ivy adds networking. External dependencies are <code>swift-crypto</code> (SHA-256, AES-GCM), <code>swift-nio</code> (TCP), and IPFS multiformats (<code>swift-cid</code>, <code>swift-multihash</code>).</p>
 
     <h2>Platform Support</h2>
 
