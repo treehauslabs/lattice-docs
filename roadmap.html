@@ -211,31 +211,38 @@
             <p class="phase-desc">Make it trivially easy to build on Lattice. A developer should go from zero to running chain in under five minutes, with tooling that feels as good as Foundry or Cargo.</p>
             <div class="phase-items">
                 <div class="phase-item">
-                    <span class="item-status wip">&#x25CB;</span>
+                    <span class="item-status done">&#x25CF;</span>
                     <div class="item-text">
                         <span class="item-title"><code>lattice</code> CLI</span>
-                        <span class="item-desc">Init, build, run, deploy, query. One binary, batteries included. <code>lattice init my-chain</code> scaffolds a full project</span>
+                        <span class="item-desc">Init, devnet, keys, status, query. <a href="https://github.com/treehauslabs/lattice-cli">treehauslabs/lattice-cli</a></span>
                     </div>
                 </div>
                 <div class="phase-item">
-                    <span class="item-status wip">&#x25CB;</span>
+                    <span class="item-status done">&#x25CF;</span>
                     <div class="item-text">
                         <span class="item-title">Local Devnet</span>
-                        <span class="item-desc"><code>lattice devnet</code> spins up a local chain with auto-mining, funded accounts, and RPC endpoint in one command</span>
+                        <span class="item-desc"><code>lattice devnet</code> spins up a local chain with configurable block time and storage. Part of lattice-cli</span>
                     </div>
                 </div>
                 <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
+                    <span class="item-status done">&#x25CF;</span>
+                    <div class="item-text">
+                        <span class="item-title">RPC Gateway</span>
+                        <span class="item-desc">Hummingbird-based JSON-RPC server with 9 endpoints. <a href="https://github.com/treehauslabs/lattice-gateway">treehauslabs/lattice-gateway</a></span>
+                    </div>
+                </div>
+                <div class="phase-item">
+                    <span class="item-status done">&#x25CF;</span>
                     <div class="item-text">
                         <span class="item-title">Block Explorer</span>
-                        <span class="item-desc">Web-based explorer for local and remote chains. Browse blocks, transactions, accounts, and state trees visually</span>
+                        <span class="item-desc">Web-based explorer with live chain stats, block lookup, key generation, and RPC console. <a href="https://github.com/treehauslabs/lattice-explorer">treehauslabs/lattice-explorer</a></span>
                     </div>
                 </div>
                 <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
+                    <span class="item-status done">&#x25CF;</span>
                     <div class="item-text">
                         <span class="item-title">Project Templates</span>
-                        <span class="item-desc">Starter templates: basic chain, token chain, state-heavy app, multi-chain setup. <code>lattice init --template token</code></span>
+                        <span class="item-desc">Three templates: basic, token, multi-chain. <code>lattice init --template token</code> scaffolds a working Swift project</span>
                     </div>
                 </div>
                 <div class="phase-item">
@@ -243,13 +250,6 @@
                     <div class="item-text">
                         <span class="item-title">Interactive Tutorials</span>
                         <span class="item-desc">Step-by-step guides: your first chain, your first child chain, cross-chain transfer, encrypted state</span>
-                    </div>
-                </div>
-                <div class="phase-item">
-                    <span class="item-status planned">&#x25CB;</span>
-                    <div class="item-text">
-                        <span class="item-title">RPC / REST Gateway</span>
-                        <span class="item-desc">HTTP API for querying chain state, submitting transactions, and subscribing to events. JSON-RPC compatible</span>
                     </div>
                 </div>
             </div>
