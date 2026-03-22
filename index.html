@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lattice — Peer-to-Peer Content-Addressable Storage</title>
-    <meta name="description" content="A modular Swift stack for peer-to-peer content-addressable storage: hierarchical blockchain, Merkle state, tiered CAS, reputation gating, and Kademlia networking.">
+    <title>Lattice — The Foundational SDK for Web3 and Data</title>
+    <meta name="description" content="The foundational SDK for web3 and data. Modular Swift packages for hierarchical blockchains, verifiable state, content-addressed storage, and peer-to-peer networking.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -86,32 +86,36 @@
 
 <main class="main">
     <div class="landing-hero">
-        <h1>Content-addressed storage for a decentralized world</h1>
-        <p class="tagline">Lattice is a modular Swift stack — seven packages that compose into a complete peer-to-peer blockchain with Merkle state, tiered CAS, reputation gating, and Kademlia networking.</p>
+        <h1>The foundational SDK for web3 and data</h1>
+        <p class="tagline">Lattice is a modular Swift SDK — eight packages that compose into hierarchical blockchains with verifiable Merkle state, content-addressed storage, peer-to-peer networking, and trustless cross-chain transfers. Build decentralized applications, verifiable data pipelines, or both.</p>
         <div class="hero-actions">
             <a href="quickstart.html" class="btn btn-primary">Quick Start</a>
+            <a href="tutorials.html" class="btn btn-secondary">Tutorials →</a>
             <a href="roadmap.html" class="btn btn-secondary">Roadmap →</a>
         </div>
     </div>
 
     <div class="stats-strip">
         <div class="stat">
-            <span class="stat-value"><span class="accent">7</span></span>
-            <span class="stat-label">Swift packages</span>
+            <span class="stat-value"><span class="accent">8</span></span>
+            <span class="stat-label">modular packages</span>
         </div>
         <div class="stat">
-            <span class="stat-value">~10<span class="accent">ns</span></span>
-            <span class="stat-label">sync memory reads</span>
+            <span class="stat-value">~28<span class="accent">ns</span></span>
+            <span class="stat-label">hot-path reads</span>
         </div>
         <div class="stat">
             <span class="stat-value">SHA-256</span>
-            <span class="stat-label">content addressing</span>
+            <span class="stat-label">verifiable state</span>
         </div>
         <div class="stat">
             <span class="stat-value">Swift <span class="accent">6</span></span>
             <span class="stat-label">strict concurrency</span>
         </div>
     </div>
+
+    <h2>Why Lattice</h2>
+    <p>Most blockchain SDKs force you to choose between security, scalability, and developer experience. Lattice is designed from first principles so you don't have to. State is inherently verifiable. Chains scale horizontally without splitting security. Every layer is standalone — use the full SDK or pick the primitives you need.</p>
 
     <h2>The Storage Chain</h2>
     <p>Every piece of data flows through a tiered worker chain — fast to slow, local to remote. Misses walk forward; hits backfill backward. The chain self-optimizes without orchestration.</p>
@@ -155,7 +159,8 @@
         </svg>
     </div>
 
-    <h2>Packages</h2>
+    <h2>SDK Packages</h2>
+    <p>Eight packages spanning blockchain, state, storage, networking, and reputation. Each is independently useful — compose them to match your use case, from a local verifiable data store to a full multi-chain network.</p>
 
     <div class="pkg-grid">
         <a href="lattice.html" class="pkg-card full-width">
@@ -163,7 +168,7 @@
                 <span class="pkg-card-dot" style="background: var(--cyan)"></span>
                 <span class="pkg-card-name">Lattice</span>
             </div>
-            <div class="pkg-card-desc">The blockchain itself. Hierarchical proof-of-work with merged mining, cross-chain transfers via Merkle proof, and parent-anchored fork choice consensus.</div>
+            <div class="pkg-card-desc">Hierarchical blockchain with merged mining, cross-chain transfers via Merkle proof, and parent-anchored fork choice. The consensus layer that ties the SDK together.</div>
             <div class="pkg-card-types">
                 <code>Block</code><code>ChainSpec</code><code>Transaction</code><code>LatticeState</code><code>LatticeNode</code>
             </div>
@@ -173,7 +178,7 @@
                 <span class="pkg-card-dot" style="background: var(--purple)"></span>
                 <span class="pkg-card-name">Cashew</span>
             </div>
-            <div class="pkg-card-desc">Merkle data structures — dictionaries, arrays, and sets that are content-addressed, lazily loadable, selectively encryptable, diffable, and provable. The foundational state layer.</div>
+            <div class="pkg-card-desc">Merkle data structures — dictionaries, arrays, and sets that are content-addressed, lazily loadable, selectively encryptable, diffable, and provable. The verifiable data layer that makes Lattice a data SDK, not just a blockchain.</div>
             <div class="pkg-card-types">
                 <code>MerkleDictionary</code><code>MerkleArray</code><code>MerkleSet</code><code>Node</code><code>Header</code>
             </div>
@@ -230,7 +235,7 @@
         </a>
     </div>
 
-    <h2>Design Principles</h2>
+    <h2>SDK Design Principles</h2>
 
     <div class="principles">
         <div class="principle">
@@ -267,7 +272,7 @@
 
     <div class="quick-inline">
         <div class="quick-header">
-            <h3>20 lines to a running chain</h3>
+            <h3>20 lines to verifiable storage</h3>
             <a href="quickstart.html">Full guide →</a>
         </div>
         <pre><code><span class="kw">import</span> <span class="ty">Acorn</span>

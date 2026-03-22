@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Roadmap — Lattice Docs</title>
-    <meta name="description" content="Lattice development roadmap: from protocol foundation to the most developer-friendly blockchain in existence.">
+    <meta name="description" content="Lattice development roadmap: from foundational SDK to the defining infrastructure for web3 and verifiable data.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -78,14 +78,14 @@
 
 <main class="main">
     <h1>Roadmap</h1>
-    <p class="subtitle">From protocol foundation to the most developer-friendly blockchain in existence. Not by adding features other chains have — by making Lattice's structural advantages accessible.</p>
+    <p class="subtitle">Lattice is the foundational SDK for web3 and data. The roadmap isn't about building capabilities — they already exist. It's about making them accessible from every language, every platform, and every use case.</p>
 
     <div class="vision-banner">
-        <p>Most blockchains store state as flat key-value bytes. Developers bolt on indexers, provers, and bridges after the fact. <strong>Lattice is different.</strong> State is Merkle data structures with built-in queries, pagination, proofs, encryption, and diffing. Multi-chain scaling doesn't sacrifice security. Cross-chain transfers need no bridges. The roadmap isn't about building these capabilities — they already exist. It's about making them trivially easy to use.</p>
+        <p>Most blockchains store state as flat key-value bytes. Developers bolt on indexers, provers, and bridges after the fact. <strong>Lattice starts from a different premise:</strong> state should be verifiable data structures with built-in queries, proofs, encryption, and diffing. Multi-chain scaling shouldn't sacrifice security. Cross-chain transfers shouldn't need bridges. The result is an SDK that serves both web3 builders and anyone who needs verifiable, content-addressed data at scale.</p>
     </div>
 
     <h2>Why Lattice is Structurally Different</h2>
-    <p>These aren't roadmap items. They're already true — consequences of the architecture.</p>
+    <p>These aren't roadmap items. They're already built into the SDK — structural consequences of the architecture that make Lattice the foundation for both web3 and data applications.</p>
 
     <div class="diff-grid">
         <div class="diff-card">
@@ -148,7 +148,7 @@
                 <span class="phase-name">Phase 0 — Foundation</span>
                 <span class="phase-tag active">SHIPPED</span>
             </div>
-            <p class="phase-desc">The core protocol stack. Seven Swift packages that compose into a complete peer-to-peer blockchain with Merkle state, tiered CAS, reputation gating, and Kademlia networking.</p>
+            <p class="phase-desc">The foundational SDK. Eight Swift packages that compose into hierarchical blockchains with verifiable Merkle state, tiered content-addressed storage, reputation gating, and Kademlia networking.</p>
             <div class="phase-items">
                 <div class="phase-item">
                     <span class="item-status done">&#x2713;</span>
@@ -215,7 +215,7 @@
                 <span class="phase-name">Phase 1 — Developer Experience</span>
                 <span class="phase-tag shipped">SHIPPED</span>
             </div>
-            <p class="phase-desc">Make it trivially easy to build on Lattice. A developer should go from zero to running chain in under five minutes, with tooling that feels as good as Foundry or Cargo.</p>
+            <p class="phase-desc">Make the SDK trivially easy to adopt. A developer should go from zero to running chain in under five minutes, with tooling that feels as polished as Foundry or Cargo.</p>
             <div class="phase-items">
                 <div class="phase-item">
                     <span class="item-status done">&#x25CF;</span>
@@ -268,7 +268,7 @@
                 <span class="phase-name">Phase 2 — Cross-Language SDKs</span>
                 <span class="phase-tag planned">PLANNED</span>
             </div>
-            <p class="phase-desc">Lattice should be accessible from any language. The protocol is simple enough that a full client SDK is hundreds, not thousands, of lines.</p>
+            <p class="phase-desc">The foundational SDK should be accessible from any language. The protocol is simple enough that a full client SDK is hundreds, not thousands, of lines — making Lattice the data and web3 layer for every ecosystem.</p>
             <div class="phase-items">
                 <div class="phase-item">
                     <span class="item-status planned">&#x25CB;</span>
@@ -435,7 +435,7 @@
     </div>
 
     <h2>Comparison</h2>
-    <p>How Lattice's architecture compares to existing chains on developer-critical features.</p>
+    <p>How the Lattice SDK compares to existing chains on the features that matter to builders.</p>
 
     <table class="vs-table">
         <thead>
@@ -516,28 +516,29 @@
 
     <h2>The Application Model</h2>
 
-    <p>Lattice doesn't encode smart contracts in the blockchain. Application logic lives in client-side apps that read and update state through blockchain transactions.</p>
+    <p>Lattice separates state from logic. The SDK provides verifiable data infrastructure — applications bring their own logic.</p>
 
     <h3>Traditional: Logic On-Chain</h3>
     <p>On Ethereum, application logic runs inside the EVM. Every node re-executes every contract call. This creates a global computer, but one that's slow, expensive, and constrained by gas limits. The chain stores both state and the code that mutates it.</p>
 
-    <h3>Lattice: Logic Client-Side, State On-Chain</h3>
-    <p>On Lattice, the blockchain is a verified state layer. Applications define their logic client-side and submit transactions that read and write Cashew Merkle state. The chain guarantees state integrity, ordering, and cross-chain verifiability. Applications get:</p>
+    <h3>Lattice: Verifiable Data Layer</h3>
+    <p>On Lattice, the SDK provides a verified state layer. Applications — whether web3 dApps, data pipelines, or traditional backends — define their logic client-side and interact with Cashew Merkle state. The SDK guarantees data integrity, ordering, and cross-chain verifiability. This makes Lattice useful far beyond blockchain:</p>
 
     <ul>
-        <li><strong>Rich state structures</strong> — state is Cashew dictionaries, arrays, and sets with built-in pagination, queries, and sorted iteration.</li>
-        <li><strong>Sparse proofs</strong> — prove any claim about state in bytes, not kilobytes. Clients verify without trusting the server.</li>
-        <li><strong>Structural diffs</strong> — subscribe to state roots and get exact changesets between versions. No event logs or indexers needed.</li>
-        <li><strong>Selective encryption</strong> — encrypt individual fields. Alice's data is private; Bob's is public. Same state tree.</li>
-        <li><strong>Lazy loading</strong> — clients only fetch the state branches they need. A wallet loading one account doesn't download the entire trie.</li>
+        <li><strong>Rich state structures</strong> — dictionaries, arrays, and sets with built-in pagination, queries, and sorted iteration. Data primitives, not byte blobs.</li>
+        <li><strong>Sparse proofs</strong> — prove any claim about state in bytes. Clients verify without trusting the server. Ideal for auditable data systems.</li>
+        <li><strong>Structural diffs</strong> — subscribe to state roots and get exact changesets between versions. Real-time data sync without polling or indexers.</li>
+        <li><strong>Selective encryption</strong> — encrypt individual fields. Private and public data coexist in the same verifiable tree.</li>
+        <li><strong>Lazy loading</strong> — clients fetch only the state branches they need. A query loading one record doesn't download the entire dataset.</li>
         <li><strong>Cross-chain reads</strong> — read and verify state from any chain in the hierarchy via Merkle proofs against parent roots.</li>
     </ul>
 
-    <p>This separates concerns cleanly: the chain handles state integrity and consensus; applications handle business logic. The result is a simpler protocol, faster iteration on application logic (no redeployment to a chain), and state that's inherently verifiable.</p>
+    <p>This makes Lattice the foundational SDK for two converging worlds: web3 applications that need trustless state, and data-intensive systems that need verifiable, content-addressed storage with built-in provenance.</p>
 
     <div class="callout tip">
         <div class="callout-title">What this enables</div>
-        <p>A DEX built on Lattice defines its matching engine client-side and writes order book state through transactions. Any client can independently verify order book state via Merkle proofs, subscribe to structural diffs for real-time updates, and read cross-chain balances — all without The Graph, a custom indexer, or a separate trust layer.</p>
+        <p><strong>Web3:</strong> A DEX defines its matching engine client-side and writes order book state through transactions. Any client verifies state via Merkle proofs, subscribes to structural diffs for real-time updates, and reads cross-chain balances — without The Graph or a custom indexer.</p>
+        <p style="margin-top: 8px;"><strong>Data:</strong> An audit system stores compliance records as Cashew Merkle state. Any auditor can independently verify the complete history of any record, prove specific claims without revealing the full dataset, and detect tampering via content addressing — without trusting the system operator.</p>
     </div>
 </main>
 
