@@ -77,7 +77,7 @@
 
 <main class="main">
     <h1>Architecture</h1>
-    <p class="subtitle">How Lattice's eight SDK packages compose into a complete system for verifiable data, hierarchical blockchains, and peer-to-peer networking.</p>
+    <p class="subtitle">How Lattice's SDK packages compose into a complete system for verifiable data, hierarchical blockchains, peer-to-peer networking, and an economic layer for storage and relay fees.</p>
 
     <h2>Cashew: The State Layer</h2>
     <p>At the foundation of Lattice is <strong>Cashew</strong> — a library of Merkle data structures (dictionaries, arrays, sets) backed by a compressed radix trie. Every piece of state in the system is a Cashew structure, identified by the SHA-256 hash of its serialized form (CID).</p>
@@ -124,6 +124,27 @@
 
     <p>When data is found at a slow tier, it automatically <strong>backfills</strong> toward the fast end. A second request for the same content hits memory in nanoseconds instead of waiting for disk or network.</p>
 
+    <h2>Storage Tiers</h2>
+    <p>ChainNetwork operates three distinct stores, each with a different eviction policy and purpose:</p>
+
+    <div class="diagram">┌─────────────────────────────────────────────────────────────────────┐
+│                        Storage Tiers                                │
+├─────────────────┬───────────────────┬───────────────┬───────────────┤
+│  Memory (LFU)   │  Disk (Verified   │  Pin Store    │  Network      │
+│                 │  Distance Store)  │  (LFU)        │  (Ivy DHT)    │
+│  Hot cache with │  XOR distance to  │  Profit-       │  Fee-based    │
+│  decay-based    │  node ID orders   │  maximizing    │  remote       │
+│  eviction       │  block storage    │  pinned blocks │  fetching     │
+│  (~10 ns)       │  (~100 µs)        │  (~100 µs)     │  (~100 ms)    │
+└─────────────────┴───────────────────┴───────────────┴───────────────┘</div>
+
+    <ol>
+        <li><strong>Memory CAS</strong> — LFU decay cache. Hot-path reads in nanoseconds. Evicts cold entries automatically.</li>
+        <li><strong>Verified Distance Store</strong> — Disk-backed store that orders blockchain data by XOR distance from the node's own ID. Blocks closer to the node are retained longer; distant blocks are evicted first. This ensures each node naturally stores the portion of the keyspace it is responsible for.</li>
+        <li><strong>Pin Store</strong> — LFU disk-backed cache for blocks the node has chosen to pin for profit. Pinned blocks earn relay revenue when remote peers request them. The eviction policy maximizes revenue by retaining blocks with the highest demand.</li>
+        <li><strong>Network (Ivy fee-based DHT)</strong> — When all local tiers miss, the request is forwarded to the Ivy peer network. Fetches incur relay fees tracked via credit lines.</li>
+    </ol>
+
     <h2>Data Flow: Get</h2>
     <ol>
         <li><code>CompositeCASWorker.get(cid:)</code> delegates to the <strong>farthest</strong> worker</li>
@@ -162,6 +183,37 @@ Ivy.fetchBlock(cid)
            ├── .block(cid, data) → resolve, backfill chain
            └── .dontHave(cid) → record failure, try next</div>
 
+    <h3>Ivy-to-Local CAS Bridge</h3>
+    <p>Ivy connects to the local CAS chain via <code>worker.setNear()</code>, allowing it to serve sub-node data to remote peers. When a remote peer requests a block, Ivy can look it up in the local CAS hierarchy without a separate fetch path. This means every node is both a consumer and a provider of content-addressed data.</p>
+
+    <h3>IvyFetcher</h3>
+    <p><code>IvyFetcher</code> bridges Cashew's <code>VolumeAwareFetcher</code> to Ivy's fee-based DHT. When a Cashew structure needs to resolve an unloaded CID and all local tiers miss, IvyFetcher routes the request through Ivy with targeted pinner fetching — it preferentially queries peers that have announced they pin the requested block, reducing unnecessary network hops and relay fees.</p>
+
+    <h2>Economic Layer</h2>
+    <p>The architecture includes an economic layer powered by Ivy's fee-based DHT and Tally's credit lines. Every relay incurs a fee tracked as a bilateral credit line between peers.</p>
+
+    <div class="diagram">┌──────────────────────────────────────────────────────────┐
+│                    Economic Flow                          │
+│                                                          │
+│  Relay Request ──→ CreditLineLedger.chargeForRelay()     │
+│                         │                                │
+│                         ▼                                │
+│              Credit line balance grows                    │
+│                         │                                │
+│                         ▼                                │
+│          needsSettlement? ──→ Mining work pays debt       │
+│                                                          │
+│  Pin Announcement ──→ Earn relay revenue from requests   │
+│                                                          │
+│  KeyDifficulty ──→ Base trust from public key cost       │
+└──────────────────────────────────────────────────────────┘</div>
+
+    <h3>Pin Announcements</h3>
+    <p>Nodes announce blocks they store to the network so that peers know where to find specific content. Announcements are re-broadcast every 6 hours to keep the DHT fresh. When a node pins a block for profit, it announces that block so remote peers can find and pay for it.</p>
+
+    <h3>Settlement</h3>
+    <p>When a credit line balance exceeds its threshold, settlement is required. Mining work (proof-of-work) is used to pay off credit line debts. The settlement threshold grows logarithmically with successful settlements, allowing trusted peers to carry larger outstanding balances.</p>
+
     <h2>Reputation Gating</h2>
     <p>Tally sits above the CAS chain, not inside it. When the node <em>receives</em> a block request from a peer, Tally gates the response:</p>
 
@@ -181,13 +233,28 @@ Tally.shouldAllow(peer)
 
     <p>This means the system self-balances: peers who contribute data build reputation and get served. Peers who only consume build debt and are progressively throttled.</p>
 
+    <h2>Background Loops</h2>
+    <p>ChainNetwork runs several background tasks to maintain the node:</p>
+
+    <table>
+        <thead>
+            <tr><th>Loop</th><th>Interval</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Mempool Pruning</td><td>Periodic</td><td>Remove expired or confirmed transactions from the mempool.</td></tr>
+            <tr><td>State GC</td><td>Periodic</td><td>Garbage-collect unreachable state from the CAS stores.</td></tr>
+            <tr><td>Pin Re-announcement</td><td>Every 6 hours</td><td>Re-broadcast pin announcements so the DHT stays current.</td></tr>
+            <tr><td>Storage Advertising</td><td>Periodic</td><td>Advertise available storage capacity to attract pinning revenue.</td></tr>
+        </tbody>
+    </table>
+
     <h2>Concurrency Model</h2>
 
     <h3>Actors</h3>
     <p>All workers (<code>MemoryCASWorker</code>, <code>DiskCASWorker</code>, <code>NetworkCASWorker</code>, <code>CompositeCASWorker</code>) and the <code>Ivy</code> node are Swift actors. This gives compile-time data race safety — no manual lock management for the async path.</p>
 
     <h3>Lock-Based Hot Path</h3>
-    <p><code>MemoryCASWorker</code> and <code>Tally</code> also expose <strong>nonisolated sync methods</strong> that bypass the actor executor and use an internal lock directly. This eliminates the ~7µs actor hop overhead for hot-path operations:</p>
+    <p><code>MemoryCASWorker</code> and <code>Tally</code> also expose <strong>nonisolated sync methods</strong> that bypass the actor executor and use an internal lock directly. This eliminates the ~7&micro;s actor hop overhead for hot-path operations:</p>
 
     <table>
         <thead>
@@ -195,7 +262,7 @@ Tally.shouldAllow(peer)
         </thead>
         <tbody>
             <tr><td><code>syncGet(cid:)</code></td><td>6–28 ns</td><td>Hot-path reads in tight loops</td></tr>
-            <tr><td><code>await getLocal(cid:)</code></td><td>~7.5 µs</td><td>General async code, chain traversal</td></tr>
+            <tr><td><code>await getLocal(cid:)</code></td><td>~7.5 &micro;s</td><td>General async code, chain traversal</td></tr>
         </tbody>
     </table>
 

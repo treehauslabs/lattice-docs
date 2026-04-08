@@ -79,7 +79,7 @@
     <h1>Acorn <span class="pkg-badge core">Core</span></h1>
     <p class="subtitle">The foundation of Lattice. Defines the content-addressable storage protocol, content identifiers, composite chaining, and the LFU eviction cache.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Acorn.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Acorn.git"</span>, from: <span class="str">"2.0.0"</span>)</code></pre>
 
     <h2 id="cas-worker">AcornCASWorker Protocol</h2>
     <p>The core protocol that all storage workers implement. Requires actor conformance for thread safety.</p>
@@ -143,23 +143,25 @@
     <p>If <code>duration</code> is nil, the operation runs without a timeout. Otherwise, a task group races the operation against a sleep, cancelling whichever loses.</p>
 
     <h2 id="content-identifier">ContentIdentifier</h2>
-    <p>A SHA-256 content address. Two identical byte sequences always produce the same identifier, regardless of where or when they're computed.</p>
+    <p>A CIDv1 content address using dag-json codec and SHA2-256 multihash, matching Cashew's format exactly. Two identical byte sequences always produce the same identifier.</p>
 
     <pre><code><span class="kw">public struct</span> <span class="ty">ContentIdentifier</span>: <span class="ty">Hashable</span>, <span class="ty">Sendable</span> {
-    <span class="kw">public let</span> rawValue: <span class="ty">String</span>  <span class="cm">// 64-character hex SHA-256</span>
+    <span class="kw">public let</span> rawValue: <span class="ty">String</span>  <span class="cm">// base32-encoded CIDv1 (starts with 'b')</span>
 
-    <span class="kw">public init</span>(for data: <span class="ty">Data</span>)        <span class="cm">// compute from data</span>
-    <span class="kw">public init</span>(rawValue: <span class="ty">String</span>)    <span class="cm">// from known hash</span>
+    <span class="kw">public init</span>(for data: <span class="ty">Data</span>)        <span class="cm">// compute CIDv1 from data</span>
+    <span class="kw">public init</span>(rawValue: <span class="ty">String</span>)    <span class="cm">// from known CID string</span>
 }</code></pre>
 
+    <p>Internally computes: <code>CID(version: .v1, codec: .dag_json, multihash: Multihash(raw: data, hashedWith: .sha2_256))</code></p>
+
     <h3>Performance</h3>
-    <p><code>ContentIdentifier</code> caches the first 8 bytes of the hash as an <code>Int</code> for O(1) dictionary lookups. The full 64-character string comparison only happens on hash collisions.</p>
+    <p><code>ContentIdentifier</code> caches the first 8 bytes of the string as an <code>Int</code> for O(1) dictionary lookups. Full string comparison only happens on hash collisions.</p>
 
     <pre><code><span class="kw">let</span> data = <span class="ty">Data</span>(<span class="str">"Hello"</span>.utf8)
 <span class="kw">let</span> cid = <span class="ty">ContentIdentifier</span>(for: data)
-print(cid.rawValue) <span class="cm">// "185f8db32271fe25f561a6fc938b2e264306ec304eda518007d1764826381969"</span>
+print(cid.rawValue) <span class="cm">// "bafyreig..." (base32-encoded CIDv1)</span>
 
-<span class="cm">// Deterministic: same data → same CID</span>
+<span class="cm">// Deterministic: same data, same CID, same as Cashew</span>
 <span class="kw">let</span> cid2 = <span class="ty">ContentIdentifier</span>(for: data)
 assert(cid == cid2) <span class="cm">// always true</span></code></pre>
 

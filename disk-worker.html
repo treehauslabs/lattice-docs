@@ -79,7 +79,7 @@
     <h1>AcornDiskWorker <span class="pkg-badge worker">Storage</span></h1>
     <p class="subtitle">Filesystem-backed content-addressable storage with Bloom filter fast rejection, POSIX I/O, SHA-256 integrity verification, and state persistence.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/AcornDiskWorker.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/AcornDiskWorker.git"</span>, from: <span class="str">"2.0.0"</span>)</code></pre>
 
     <h2>DiskCASWorker</h2>
     <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
@@ -103,7 +103,7 @@
         <div class="param">
             <span class="param-name">directory</span>
             <span class="param-type">URL</span>
-            <span class="param-desc">Root directory for the CAS store. 256 shard subdirectories (00–ff) are created automatically.</span>
+            <span class="param-desc">Root directory for the CAS store. 256 shard subdirectories (00–ff) are created automatically, using FNV-1a hash of CID string for uniform distribution.</span>
         </div>
         <div class="param">
             <span class="param-name">capacity</span>
@@ -133,18 +133,23 @@
     </div>
 
     <h2>Directory Layout</h2>
-    <p>Files are sharded by the first two hex characters of the CID into 256 subdirectories:</p>
+    <p>Files are sharded into 256 subdirectories using an FNV-1a hash of the CID string. This produces uniform distribution regardless of CID encoding format (hex, base32, CIDv1).</p>
 
     <div class="diagram">&lt;directory&gt;/
 ├── 00/
-│   └── 00a3f7b2...64chars...
+│   └── bafyreig...  (CIDv1 strings)
 ├── 01/
-│   └── 01e8c4d1...64chars...
+│   └── bafyreia...
 ├── ...
 ├── ff/
-│   └── ff29b10c...64chars...
+│   └── bafyreib...
 ├── .bloom        ← serialized Bloom filter
 └── .sizes        ← JSON map of CID → byte size</div>
+
+    <div class="callout info">
+        <div class="callout-title">v2.0 Migration</div>
+        Previous versions sharded by the first two characters of the CID string, which caused all CIDv1 entries to land in a single "ba/" bucket. The FNV-1a approach distributes uniformly. The static method <code>DiskCASWorker.shardKey(for:)</code> computes the shard for any CID string.
+    </div>
 
     <h2>Methods</h2>
 

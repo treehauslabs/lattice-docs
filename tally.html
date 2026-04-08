@@ -66,6 +66,8 @@
     <a href="tally.html#reputation" class="nested">Reputation Scoring</a>
     <a href="tally.html#rate-pressure" class="nested">Rate Pressure</a>
     <a href="tally.html#challenges" class="nested">Proof-of-Work</a>
+    <a href="tally.html#credit-lines" class="nested">Credit Lines</a>
+    <a href="tally.html#key-difficulty" class="nested">Key Difficulty</a>
 
     <div class="section-title">Networking</div>
     <a href="ivy.html">Ivy</a>
@@ -77,9 +79,9 @@
 
 <main class="main">
     <h1>Tally <span class="pkg-badge rep">Reputation</span></h1>
-    <p class="subtitle">Bitswap-inspired peer reputation and rate limiting. Tracks exchange history, computes composite reputation scores, and gates requests using rate pressure. Naturally Sybil-resistant — new peers must earn credit.</p>
+    <p class="subtitle">Bitswap-inspired peer reputation and rate limiting. Tracks exchange history, computes composite reputation scores, and gates requests using rate pressure. Naturally Sybil-resistant — new peers must earn credit. Includes bilateral credit lines for relay fee accounting and key-difficulty-based base trust.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Tally.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Tally.git"</span>, from: <span class="str">"1.2.0"</span>)</code></pre>
 
     <h2>Tally</h2>
     <p>The main entry point. Thread-safe via internal locking — all methods are <code>nonisolated</code> and safe to call from any context.</p>
@@ -130,7 +132,7 @@
 
     <h3>Gating</h3>
 
-    <h4>shouldAllow(peer:) → Bool</h4>
+    <h4>shouldAllow(peer:) &rarr; Bool</h4>
     <p>The primary gating function. Determines whether to serve a request from a peer based on current rate pressure and the peer's reputation.</p>
 
     <pre><code><span class="kw">if</span> tally.shouldAllow(peer: requestingPeer) {
@@ -180,7 +182,7 @@
             <tr><td><code>debtRatio</code></td><td><code>bytesSent / (bytesReceived + 1)</code></td></tr>
             <tr><td><code>reciprocity</code></td><td><code>1.0 / (1.0 + debtRatio)</code></td></tr>
             <tr><td><code>successRate</code></td><td><code>successes / (successes + failures)</code> or 0.5 if no data</td></tr>
-            <tr><td><code>failurePenalty</code></td><td><code>(failures / total)²</code> — quadratic penalty</td></tr>
+            <tr><td><code>failurePenalty</code></td><td><code>(failures / total)&sup2;</code> — quadratic penalty</td></tr>
         </tbody>
     </table>
 
@@ -190,8 +192,8 @@
     <p>This means recent exchanges matter more than historical ones. A peer who was generous a week ago but hasn't contributed since will see their credit decay.</p>
 
     <h3>EWMA (Exponential Weighted Moving Average)</h3>
-    <p>Used for latency tracking. Smoothing factor α = 0.3 by default:</p>
-    <pre><code>value = α × sample + (1 - α) × value</code></pre>
+    <p>Used for latency tracking. Smoothing factor &alpha; = 0.3 by default:</p>
+    <pre><code>value = &alpha; &times; sample + (1 - &alpha;) &times; value</code></pre>
     <p>Also tracks <code>min</code>, <code>max</code>, and <code>count</code>.</p>
 
     <h2 id="reputation">Reputation Scoring</h2>
@@ -210,14 +212,14 @@
     </table>
 
     <h3>Formula</h3>
-    <pre><code>reputation = weights.reciprocity × adjustedReciprocity
-           + weights.latency × latencyScore
-           + weights.successRate × (successRate - failurePenalty)
-           + weights.challenges × challengeRatio</code></pre>
+    <pre><code>reputation = weights.reciprocity &times; adjustedReciprocity
+           + weights.latency &times; latencyScore
+           + weights.successRate &times; (successRate - failurePenalty)
+           + weights.challenges &times; challengeRatio</code></pre>
 
     <p>Where:</p>
     <ul>
-        <li><strong>adjustedReciprocity</strong> = reciprocity × confidence (confidence rises with total bytes exchanged vs baseline)</li>
+        <li><strong>adjustedReciprocity</strong> = reciprocity &times; confidence (confidence rises with total bytes exchanged vs baseline)</li>
         <li><strong>latencyScore</strong> = min(baseline / (ewma + 1), 1.0)</li>
         <li><strong>challengeRatio</strong> = min(challengeHardness / hardnessBaseline, 1.0)</li>
     </ul>
@@ -241,7 +243,7 @@
     <h2 id="rate-pressure">Rate Pressure</h2>
     <p>Rate pressure determines how strict gating should be. It's based on actual throughput vs the configured limit:</p>
 
-    <pre><code>pressure = bytesInWindow / (rateLimitBytesPerSecond × windowDuration)</code></pre>
+    <pre><code>pressure = bytesInWindow / (rateLimitBytesPerSecond &times; windowDuration)</code></pre>
 
     <p>Clamped to [0, 2]. The <code>shouldAllow()</code> thresholds scale with pressure:</p>
 
@@ -251,8 +253,8 @@
         </thead>
         <tbody>
             <tr><td><code>&lt; 0.5</code></td><td>Always allow (plenty of capacity)</td></tr>
-            <tr><td><code>0.5 – 1.0</code></td><td>Require reputation ≥ scaled threshold (0.0 → 0.8)</td></tr>
-            <tr><td><code>≥ 1.0</code></td><td>Require reputation ≥ 0.8 (only well-known peers)</td></tr>
+            <tr><td><code>0.5 – 1.0</code></td><td>Require reputation &ge; scaled threshold (0.0 &rarr; 0.8)</td></tr>
+            <tr><td><code>&ge; 1.0</code></td><td>Require reputation &ge; 0.8 (only well-known peers)</td></tr>
         </tbody>
     </table>
 
@@ -284,13 +286,85 @@
     <span class="kw">public func</span> <span class="fn">verify</span>(solution: <span class="ty">Data</span>) -> <span class="ty">Bool</span>
 }</code></pre>
 
-    <p>Verification: SHA-256(nonce + solution) must have ≥ <code>difficulty</code> leading zero bits. Default difficulty is 16 bits (~65k hash attempts). Challenges expire after 30 seconds.</p>
+    <p>Verification: SHA-256(nonce + solution) must have &ge; <code>difficulty</code> leading zero bits. Default difficulty is 16 bits (~65k hash attempts). Challenges expire after 30 seconds.</p>
+
+    <h2 id="credit-lines">Credit Lines</h2>
+    <p>As of v1.2.0, Tally includes <code>CreditLine</code> and <code>CreditLineLedger</code> (moved from Ivy) for bilateral relay fee accounting. A credit line is a lightweight IOU between two peers that tracks how much one peer owes the other for relay services.</p>
+
+    <h3>CreditLine</h3>
+    <p>A bilateral IOU between two peers. Positive balance means the remote peer owes us; negative means we owe them.</p>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">CreditLine</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public var</span> balance: <span class="ty">Int64</span>                  <span class="cm">// positive = they owe us</span>
+    <span class="kw">public var</span> sequence: <span class="ty">UInt64</span>                 <span class="cm">// monotonic update counter</span>
+    <span class="kw">public var</span> threshold: <span class="ty">Int64</span>                <span class="cm">// settlement trigger point</span>
+    <span class="kw">public var</span> successfulSettlements: <span class="ty">UInt64</span>   <span class="cm">// lifetime settlement count</span>
+}</code></pre>
+
+    <h4>Methods</h4>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>adjustBalance(_:)</code></td><td>Add or subtract from the balance; increments the sequence number.</td></tr>
+            <tr><td><code>recordSettlement()</code></td><td>Zero out the balance, increment <code>successfulSettlements</code>, and grow the threshold.</td></tr>
+            <tr><td><code>recordPartialSettlement(amount:)</code></td><td>Reduce balance by a partial amount without fully settling.</td></tr>
+            <tr><td><code>recordMissedSettlement()</code></td><td>Shrink the threshold after a missed settlement (trust decreases).</td></tr>
+            <tr><td><code>needsSettlement</code></td><td>Returns <code>true</code> when <code>abs(balance) &ge; threshold</code>.</td></tr>
+            <tr><td><code>availableCapacity</code></td><td>How much more credit can be extended before the threshold is hit.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout info">
+        <div class="callout-title">Logarithmic trust growth</div>
+        The settlement threshold grows logarithmically with the number of successful settlements. Early relationships have tight credit limits. As peers repeatedly settle debts on time, the threshold expands — allowing larger outstanding balances before requiring settlement. Missed settlements shrink the threshold back down.
+    </div>
+
+    <h3>CreditLineLedger</h3>
+    <p>An actor that manages all credit lines for a node. Each peer relationship has its own <code>CreditLine</code>.</p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">CreditLineLedger</span> {
+    <span class="kw">public func</span> <span class="fn">establish</span>(with peer: <span class="ty">PeerID</span>)
+    <span class="kw">public func</span> <span class="fn">chargeForRelay</span>(peer: <span class="ty">PeerID</span>, amount: <span class="ty">Int64</span>)
+    <span class="kw">public func</span> <span class="fn">earnFromRelay</span>(peer: <span class="ty">PeerID</span>, amount: <span class="ty">Int64</span>)
+    <span class="kw">public func</span> <span class="fn">needsSettlement</span>(with peer: <span class="ty">PeerID</span>) -> <span class="ty">Bool</span>
+    <span class="kw">public func</span> <span class="fn">recordSettlement</span>(peer: <span class="ty">PeerID</span>)
+    <span class="kw">public var</span> allLines: [<span class="ty">PeerID</span>: <span class="ty">CreditLine</span>]
+}</code></pre>
+
+    <p>The ledger is the integration point between Ivy's relay layer and Tally's reputation system. When Ivy relays data on behalf of a peer, it calls <code>chargeForRelay</code>; when a peer relays data for us, it calls <code>earnFromRelay</code>. Settlement happens via mining work that pays off credit line debts.</p>
+
+    <h2 id="key-difficulty">Key Difficulty</h2>
+    <p>As of v1.2.0, Tally includes <code>KeyDifficulty</code> (moved from Ivy) for Sybil-resistant base trust assignment. A node's public key inherently carries a proof-of-work cost: the number of trailing zero bits in <code>SHA-256(publicKey)</code>.</p>
+
+    <pre><code><span class="kw">public enum</span> <span class="ty">KeyDifficulty</span> {
+    <span class="kw">public static func</span> <span class="fn">trailingZeroBits</span>(_ data: <span class="ty">Data</span>) -> <span class="ty">Int</span>
+    <span class="kw">public static func</span> <span class="fn">trailingZeroBitsOfHash</span>(_ data: <span class="ty">Data</span>) -> <span class="ty">Int</span>
+    <span class="kw">public static func</span> <span class="fn">baseTrust</span>(publicKey: <span class="ty">Data</span>) -> <span class="ty">Double</span>
+}</code></pre>
+
+    <table>
+        <thead>
+            <tr><th>Function</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>trailingZeroBits(_:)</code></td><td>Count trailing zero bits of raw data.</td></tr>
+            <tr><td><code>trailingZeroBitsOfHash(_:)</code></td><td>Count trailing zero bits of <code>SHA-256(data)</code>.</td></tr>
+            <tr><td><code>baseTrust(publicKey:)</code></td><td>Compute a base trust score from key difficulty. More trailing zeros = more initial trust.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="callout tip">
+        <div class="callout-title">Sybil resistance</div>
+        Generating a key with N trailing zero bits in its SHA-256 hash requires approximately 2^N attempts. A node with 16 trailing zeros has demonstrably burned ~65k hashes finding that key. This provides a small but meaningful base trust for new peers before any exchange history exists, making mass Sybil creation expensive.
+    </div>
 
     <h2>TallyConfig</h2>
 
     <pre><code><span class="kw">public struct</span> <span class="ty">TallyConfig</span>: <span class="ty">Sendable</span> {
     <span class="kw">public let</span> weights: <span class="ty">ReputationWeights</span>       <span class="cm">// default: .default</span>
-    <span class="kw">public let</span> latencyBaseline: <span class="ty">Double</span>        <span class="cm">// default: 100,000 µs</span>
+    <span class="kw">public let</span> latencyBaseline: <span class="ty">Double</span>        <span class="cm">// default: 100,000 &micro;s</span>
     <span class="kw">public let</span> decayHalfLife: <span class="ty">Double</span>          <span class="cm">// default: 3600 s</span>
     <span class="kw">public let</span> challengeDifficulty: <span class="ty">Int</span>       <span class="cm">// default: 16 bits</span>
     <span class="kw">public let</span> challengeExpiration: <span class="ty">Duration</span>  <span class="cm">// default: 30 s</span>

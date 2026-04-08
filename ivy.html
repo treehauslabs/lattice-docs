@@ -72,18 +72,22 @@
     <a href="ivy.html#connections" class="nested">Connections</a>
     <a href="ivy.html#router" class="nested">DHT Router</a>
     <a href="ivy.html#messages" class="nested">Wire Protocol</a>
+    <a href="ivy.html#economics" class="nested">Fee Model</a>
+    <a href="ivy.html#credit-lines" class="nested">Credit Lines</a>
+    <a href="ivy.html#pin-discovery" class="nested">Pin Discovery</a>
+    <a href="ivy.html#settlement" class="nested">Settlement</a>
     <a href="ivy.html#network-worker" class="nested">Network Worker</a>
 </aside>
 
 <main class="main">
     <h1>Ivy <span class="pkg-badge net">Networking</span></h1>
-    <p class="subtitle">Peer-to-peer networking layer. Kademlia DHT routing, TCP transport via swift-nio, reputation-weighted content routing, and local peer discovery.</p>
+    <p class="subtitle">Peer-to-peer networking layer with an economic protocol. Kademlia DHT routing, TCP transport via swift-nio, fee-based content routing, credit line accounting, pin discovery, STUN NAT traversal, peer exchange (PEX), and XOR-distance-based storage with eviction protection.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Ivy.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Ivy.git"</span>, from: <span class="str">"3.0.0"</span>)</code></pre>
 
     <h2>Ivy Actor</h2>
     <p><span class="badge actor">actor</span></p>
-    <p>The main node. Manages connections, routes content requests, and maintains the DHT.</p>
+    <p>The main node. Manages connections, routes content requests, maintains the DHT, and tracks credit line balances with every peer via an economic layer.</p>
 
     <pre><code><span class="kw">public actor</span> <span class="ty">Ivy</span> {
     <span class="kw">public let</span> config: <span class="ty">IvyConfig</span>
@@ -91,13 +95,17 @@
     <span class="kw">public let</span> router: <span class="ty">Router</span>
     <span class="kw">public let</span> localID: <span class="ty">PeerID</span>
     <span class="kw">public let</span> group: <span class="ty">EventLoopGroup</span>
+    <span class="kw">public let</span> ledger: <span class="ty">CreditLineLedger</span>
     <span class="kw">public weak var</span> delegate: <span class="ty">IvyDelegate</span>?
+    <span class="kw">public private(set) var</span> publicAddress: <span class="ty">ObservedAddress</span>?
 
     <span class="kw">public init</span>(
         config: <span class="ty">IvyConfig</span>,
         group: <span class="ty">EventLoopGroup</span> = <span class="ty">MultiThreadedEventLoopGroup</span>.singleton
     )
 }</code></pre>
+
+    <p>Internally, Ivy maintains a <code>blockCache</code> (bounded dictionary of recently seen block data), a <code>pinAnnouncements</code> table (CID to list of known pinners), and an <code>InventorySet</code> (<code>haveSet</code>) tracking which CIDs the node has seen.</p>
 
     <h3>Lifecycle</h3>
     <table>
@@ -107,11 +115,11 @@
         <tbody>
             <tr>
                 <td><code>start()</code> <span class="badge async">async throws</span></td>
-                <td>Start TCP listener, local discovery (if enabled), and connect to bootstrap peers.</td>
+                <td>Start TCP listener, STUN address discovery, local discovery (if enabled), connect to bootstrap peers, start health monitor, PEX, zone sync, and proactive replication.</td>
             </tr>
             <tr>
                 <td><code>stop()</code> <span class="badge async">async</span></td>
-                <td>Close server, stop discovery, disconnect all peers.</td>
+                <td>Cancel all background tasks (PEX, replication, zone sync, health monitor), drain pending operations, close server, disconnect all peers.</td>
             </tr>
         </tbody>
     </table>
@@ -122,10 +130,66 @@
             <tr><th>Method / Property</th><th>Description</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>connect(to:)</code> <span class="badge async">async throws</span></td><td>Dial a peer by endpoint. Adds to router and starts message handler.</td></tr>
-            <tr><td><code>disconnect(_:)</code></td><td>Close connection and remove peer.</td></tr>
-            <tr><td><code>connectedPeers</code></td><td>Array of currently connected <code>PeerID</code>s.</td></tr>
+            <tr><td><code>connect(to:)</code> <span class="badge async">async throws</span></td><td>Dial a peer by endpoint. Adds to router, establishes credit line, starts health tracking and message handler, sends identify.</td></tr>
+            <tr><td><code>disconnect(_:)</code></td><td>Close connection, remove peer, clean up pending forwards.</td></tr>
+            <tr><td><code>connectedPeers</code></td><td>Array of currently connected <code>PeerID</code>s (both TCP and local peers).</td></tr>
+            <tr><td><code>directPeerCount</code></td><td>Number of TCP-connected peers (excludes local in-process peers).</td></tr>
             <tr><td><code>worker()</code></td><td>Get the <code>NetworkCASWorker</code> for this node.</td></tr>
+            <tr><td><code>casBridge(localCAS:)</code></td><td>Get a <code>CASBridge</code> that combines local CAS storage with network fetching.</td></tr>
+            <tr><td><code>serviceBus()</code></td><td>Get the <code>LocalServiceBus</code> for in-process peer communication.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Public API (Application-Facing)</h3>
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>get(cid:fee:)</code> <span class="badge async">async</span></td>
+                <td>Retrieve content by CID. Checks local cache and local storage first, then issues a fee-based <code>dhtForward</code> to the closest peers in the DHT. Fee defaults to <code>config.defaultRequestFee</code>. Returns <code>Data?</code>.</td>
+            </tr>
+            <tr>
+                <td><code>get(cid:target:fee:)</code> <span class="badge async">async</span></td>
+                <td>Retrieve content by CID targeting a specific pinner (from a <code>discoverPinners</code> result). Routes the fee-based request toward the target peer's hash rather than the CID hash. Returns <code>Data?</code>.</td>
+            </tr>
+            <tr>
+                <td><code>save(cid:data:pin:)</code> <span class="badge async">async</span></td>
+                <td>Store content locally and announce to the DHT via <code>publishBlock</code>. When <code>pin</code> is true (default), also publishes a pin announcement to peers near the CID hash with a 24-hour expiry.</td>
+            </tr>
+            <tr>
+                <td><code>discoverPinners(cid:fee:)</code> <span class="badge async">async</span></td>
+                <td>Discover pinners for a CID via fee-based <code>findPins</code>. Sends requests to the closest peers in the CID's hash neighborhood. Returns locally known pin announcements immediately; remote results arrive asynchronously via <code>IvyDelegate</code>.</td>
+            </tr>
+            <tr>
+                <td><code>publishPinAnnounce(rootCID:selector:expiry:signature:fee:)</code></td>
+                <td>Announce that this node pins a CID. Sends <code>pinAnnounce</code> messages to the k closest peers to the CID hash.</td>
+            </tr>
+            <tr>
+                <td><code>sendMessage(to:topic:payload:)</code></td>
+                <td>Send a <code>peerMessage</code> to a specific connected peer.</td>
+            </tr>
+            <tr>
+                <td><code>broadcastMessage(topic:payload:)</code></td>
+                <td>Send a <code>peerMessage</code> to all connected peers (TCP and local).</td>
+            </tr>
+            <tr>
+                <td><code>submitSettlement(to:nonce:hash:blockNonce:)</code></td>
+                <td>Submit a mining challenge solution to a creditor as settlement proof.</td>
+            </tr>
+            <tr>
+                <td><code>submitSettlementProof(to:txHash:amount:chainId:)</code></td>
+                <td>Submit an on-chain settlement proof to a creditor.</td>
+            </tr>
+            <tr>
+                <td><code>issueMiningChallenge(to:hashPrefix:difficulty:noncePrefix:)</code></td>
+                <td>Issue a mining challenge to a debtor peer.</td>
+            </tr>
+            <tr>
+                <td><code>generateKey(targetDifficulty:maxAttempts:)</code> <span class="badge async">static</span></td>
+                <td>Generate a Curve25519 key pair with a target trailing-zero-bit difficulty. Returns <code>(publicKey: String, privateKey: Data)?</code>.</td>
+            </tr>
         </tbody>
     </table>
 
@@ -136,51 +200,64 @@
         </thead>
         <tbody>
             <tr>
-                <td><code>announceBlock(cid:)</code> <span class="badge async">async</span></td>
-                <td>Tell all connected peers you have a block. Respects Tally gating.</td>
+                <td><code>publishBlock(cid:data:)</code> <span class="badge async">async</span></td>
+                <td>Store block in local CAS and block cache, add to haveSet, and announce to all connected peers. Respects Tally gating.</td>
             </tr>
             <tr>
-                <td><code>broadcastBlock(cid:data:)</code> <span class="badge async">async</span></td>
-                <td>Push block data to all connected peers.</td>
+                <td><code>publishBlock(cid:data:referencedContent:)</code> <span class="badge async">async</span></td>
+                <td>Same as above but also stores referenced content (e.g., transaction data for a block).</td>
+            </tr>
+            <tr>
+                <td><code>announceBlock(cid:)</code></td>
+                <td>Tell all connected peers you have a block (without pushing the data). Respects Tally gating.</td>
             </tr>
             <tr>
                 <td><code>handleBlockRequest(cid:from:)</code> <span class="badge async">async</span></td>
-                <td>Serve a block request. Checks Tally, fetches from local chain, sends <code>.block</code> or <code>.dontHave</code>.</td>
+                <td>Serve a block request. Checks Tally, fetches from local storage, sends <code>.block</code> or <code>.dontHave</code>.</td>
+            </tr>
+            <tr>
+                <td><code>broadcastChainAnnounce(destinationHash:hops:chainData:)</code></td>
+                <td>Broadcast a chain announcement to all connected peers. Respects Tally gating.</td>
             </tr>
         </tbody>
     </table>
 
     <h3>DHT</h3>
 
-    <h4>findNode(target:) → [PeerEndpoint]</h4>
-    <p>Look up peers close to a target key in the DHT. Returns the locally-known closest peers and queries up to 3 of them for their closest peers.</p>
+    <h4>findNode(target:) &rarr; [PeerEndpoint]</h4>
+    <p>Look up peers close to a target key in the DHT. Returns the locally-known closest peers and iteratively queries up to 3 rounds of the closest connected peers for their closest peers.</p>
 
     <h2 id="connections">PeerConnection</h2>
     <p>A TCP connection to a single peer, built on swift-nio <code>Channel</code>.</p>
 
     <pre><code><span class="kw">public final class</span> <span class="ty">PeerConnection</span>: <span class="at">@unchecked</span> <span class="ty">Sendable</span> {
-    <span class="kw">public let</span> id: <span class="ty">PeerID</span>
+    <span class="kw">public internal(set) var</span> id: <span class="ty">PeerID</span>
     <span class="kw">public let</span> endpoint: <span class="ty">PeerEndpoint</span>
     <span class="kw">public var</span> messages: <span class="ty">AsyncStream</span>&lt;<span class="ty">Message</span>&gt;
 
     <span class="kw">public static func</span> <span class="fn">dial</span>(
         endpoint: <span class="ty">PeerEndpoint</span>,
         group: <span class="ty">EventLoopGroup</span>
-    ) <span class="kw">async throws</span> -> <span class="ty">PeerConnection</span>
+    ) <span class="kw">async throws</span> -&gt; <span class="ty">PeerConnection</span>
 
     <span class="kw">public func</span> <span class="fn">send</span>(_ message: <span class="ty">Message</span>) <span class="kw">async throws</span>
+    <span class="kw">public func</span> <span class="fn">fireAndForget</span>(_ payload: <span class="ty">Data</span>)
+    <span class="kw">public func</span> <span class="fn">fireAndForgetMessage</span>(_ message: <span class="ty">Message</span>)
     <span class="kw">public func</span> <span class="fn">cancel</span>()
 }</code></pre>
 
     <p>Inbound messages are delivered via <code>AsyncStream&lt;Message&gt;</code>. The stream finishes when the connection closes.</p>
 
     <h3>NIO Pipeline</h3>
-    <div class="diagram">TCP bytes → MessageFrameDecoder → PeerChannelHandler → AsyncStream&lt;Message&gt;
-                    │                         │
-                    ├── length-prefix decode   ├── feed to PeerConnection
-                    └── Message.deserialize    └── close detection</div>
+    <div class="diagram">TCP bytes &rarr; MessageFrameDecoder &rarr; PeerChannelHandler &rarr; AsyncStream&lt;Message&gt;
+                    |                         |
+                    +-- length-prefix decode   +-- feed to PeerConnection
+                    +-- Message.deserialize    +-- close detection</div>
 
     <p><code>MessageFrameDecoder</code> handles buffering and 4-byte big-endian length prefix decoding, then deserializes the payload into a <code>Message</code> enum value.</p>
+
+    <h3>Identify Protocol</h3>
+    <p>On connect, each side sends an <code>identify</code> message containing its public key, the observed address of the remote peer, its own listen addresses, and a Curve25519 signature. The receiver verifies the signature against the claimed public key. If verification fails, the peer is disconnected. This also enables inbound connections (which start with a temporary ID) to be reassociated with the correct <code>PeerID</code>.</p>
 
     <h2>PeerEndpoint</h2>
     <pre><code><span class="kw">public struct</span> <span class="ty">PeerEndpoint</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span> {
@@ -188,6 +265,19 @@
     <span class="kw">public let</span> host: <span class="ty">String</span>
     <span class="kw">public let</span> port: <span class="ty">UInt16</span>
 }</code></pre>
+
+    <h2>STUN NAT Traversal</h2>
+    <p><span class="badge actor">actor</span></p>
+    <p>On startup, Ivy uses a <code>STUNClient</code> to discover the node's public IP address and port via STUN (Session Traversal Utilities for NAT). The discovered address is stored as <code>publicAddress</code> and included in <code>identify</code> messages to inform peers how to reach this node.</p>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">ObservedAddress</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span>, <span class="ty">Hashable</span> {
+    <span class="kw">public let</span> host: <span class="ty">String</span>
+    <span class="kw">public let</span> port: <span class="ty">UInt16</span>
+}</code></pre>
+
+    <p>Default STUN servers: <code>stun.l.google.com:19302</code>, <code>stun1.l.google.com:19302</code>, <code>stun.cloudflare.com:3478</code>. Configurable via <code>IvyConfig.stunServers</code>.</p>
+
+    <p>Observed addresses are also collected from <code>identify</code> messages received from other peers. When two or more peers report the same external address, it is promoted to the node's <code>publicAddress</code> and the delegate is notified via <code>ivy(_:didDiscoverPublicAddress:)</code>.</p>
 
     <h2 id="router">Router (Kademlia DHT)</h2>
     <p>A Kademlia-style routing table with 256 k-buckets.</p>
@@ -208,7 +298,7 @@
             </tr>
             <tr>
                 <td><code>closestPeers(to:count:)</code></td>
-                <td>Return the <code>count</code> closest peers to a target hash by XOR distance.</td>
+                <td>Return the <code>count</code> closest peers to a target hash by XOR distance. Accepts <code>[UInt8]</code> or <code>String</code>.</td>
             </tr>
             <tr>
                 <td><code>allPeers()</code></td>
@@ -222,6 +312,10 @@
                 <td><code>bucketIndex(for:)</code></td>
                 <td>Get the k-bucket index for a given peer key.</td>
             </tr>
+            <tr>
+                <td><code>cachedHash(_:)</code></td>
+                <td>SHA-256 hash of a string with an internal cache (up to 10,000 entries) to avoid recomputation.</td>
+            </tr>
         </tbody>
     </table>
 
@@ -231,9 +325,12 @@
             <tr><th>Method</th><th>Description</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>Router.hash(_:)</code></td><td>SHA-256 hash of a string, returned as <code>[UInt8]</code>.</td></tr>
+            <tr><td><code>Router.hash(_:)</code></td><td>SHA-256 hash of a string or <code>Data</code>, returned as <code>[UInt8]</code>.</td></tr>
+            <tr><td><code>Router.truncatedHash(_:)</code></td><td>SHA-256 hash truncated to 16 bytes, returned as <code>Data</code>.</td></tr>
+            <tr><td><code>Router.destinationHash(name:identityHash:)</code></td><td>Compute a destination hash from a name and identity hash (used for chain routing).</td></tr>
             <tr><td><code>Router.commonPrefixLength(_:_:)</code></td><td>XOR-based common prefix length between two hashes.</td></tr>
             <tr><td><code>Router.xorDistance(_:_:)</code></td><td>Byte-wise XOR distance between two hashes.</td></tr>
+            <tr><td><code>Router.isCloser(_:than:to:)</code></td><td>Returns true if hash <code>a</code> is closer than hash <code>b</code> to the target.</td></tr>
         </tbody>
     </table>
 
@@ -248,76 +345,299 @@
     <h3>How K-Buckets Work</h3>
     <p>The 256-bit SHA-256 keyspace is divided into 256 buckets by Common Prefix Length (CPL) between the local node's hash and each peer's hash:</p>
     <ul>
-        <li><strong>Bucket 0</strong>: Peers where the first bit differs (half the keyspace — far away)</li>
+        <li><strong>Bucket 0</strong>: Peers where the first bit differs (half the keyspace -- far away)</li>
         <li><strong>Bucket 1</strong>: Peers sharing 1 prefix bit (quarter of the keyspace)</li>
         <li><strong>Bucket 255</strong>: Peers sharing 255 prefix bits (extremely close neighbors)</li>
     </ul>
     <p>Each bucket holds at most <code>k</code> entries (default 20). When full, the peer with the lowest Tally reputation is evicted.</p>
 
     <h2 id="messages">Wire Protocol</h2>
-    <p>All messages are serialized to a binary format with a 1-byte tag followed by a message-specific payload.</p>
+    <p>All messages are serialized to a binary format with a 1-byte tag followed by a message-specific payload. The protocol spans three categories: core DHT messages, chain synchronization messages, and economic layer messages.</p>
 
     <pre><code><span class="kw">public enum</span> <span class="ty">Message</span>: <span class="ty">Sendable</span> {
+    <span class="cm">// Core DHT</span>
     <span class="kw">case</span> ping(nonce: <span class="ty">UInt64</span>)
     <span class="kw">case</span> pong(nonce: <span class="ty">UInt64</span>)
-    <span class="kw">case</span> wantBlock(cid: <span class="ty">String</span>)
     <span class="kw">case</span> block(cid: <span class="ty">String</span>, data: <span class="ty">Data</span>)
     <span class="kw">case</span> dontHave(cid: <span class="ty">String</span>)
-    <span class="kw">case</span> findNode(target: <span class="ty">Data</span>)
+    <span class="kw">case</span> findNode(target: <span class="ty">Data</span>, fee: <span class="ty">UInt64</span>)
     <span class="kw">case</span> neighbors([<span class="ty">PeerEndpoint</span>])
     <span class="kw">case</span> announceBlock(cid: <span class="ty">String</span>)
+    <span class="kw">case</span> identify(publicKey: <span class="ty">String</span>, observedHost: <span class="ty">String</span>,
+                 observedPort: <span class="ty">UInt16</span>, listenAddrs: [(<span class="ty">String</span>, <span class="ty">UInt16</span>)],
+                 signature: <span class="ty">Data</span>)
+    <span class="kw">case</span> dhtForward(cid: <span class="ty">String</span>, ttl: <span class="ty">UInt8</span>, fee: <span class="ty">UInt64</span>,
+                   target: <span class="ty">Data</span>?, selector: <span class="ty">String</span>?)
+    <span class="kw">case</span> wantBlocks(cids: [<span class="ty">String</span>])
+
+    <span class="cm">// Zone Sync &amp; Replication</span>
+    <span class="kw">case</span> getZoneInventory(nodeHash: <span class="ty">Data</span>, limit: <span class="ty">UInt16</span>)
+    <span class="kw">case</span> zoneInventory(cids: [<span class="ty">String</span>])
+    <span class="kw">case</span> haveCIDs(nonce: <span class="ty">UInt64</span>, cids: [<span class="ty">String</span>])
+    <span class="kw">case</span> haveCIDsResult(nonce: <span class="ty">UInt64</span>, have: [<span class="ty">String</span>])
+
+    <span class="cm">// Chain Sync</span>
+    <span class="kw">case</span> chainAnnounce(destinationHash: <span class="ty">Data</span>, hops: <span class="ty">UInt8</span>, chainData: <span class="ty">Data</span>)
+    <span class="kw">case</span> compactBlock(chainHash: <span class="ty">Data</span>, headerCID: <span class="ty">String</span>, txCIDs: [<span class="ty">String</span>])
+    <span class="kw">case</span> getBlockTxns(chainHash: <span class="ty">Data</span>, headerCID: <span class="ty">String</span>, missingTxCIDs: [<span class="ty">String</span>])
+    <span class="kw">case</span> blockTxns(chainHash: <span class="ty">Data</span>, headerCID: <span class="ty">String</span>, transactions: [(<span class="ty">String</span>, <span class="ty">Data</span>)])
+    <span class="kw">case</span> newTxHashes(chainHash: <span class="ty">Data</span>, txHashes: [<span class="ty">String</span>])
+    <span class="kw">case</span> getTxns(chainHash: <span class="ty">Data</span>, txHashes: [<span class="ty">String</span>])
+    <span class="kw">case</span> txns(chainHash: <span class="ty">Data</span>, transactions: [(<span class="ty">String</span>, <span class="ty">Data</span>)])
+    <span class="kw">case</span> getBlockRange(chainHash: <span class="ty">Data</span>, startIndex: <span class="ty">UInt64</span>, count: <span class="ty">UInt16</span>)
+    <span class="kw">case</span> blockRange(chainHash: <span class="ty">Data</span>, startIndex: <span class="ty">UInt64</span>, blocks: [(<span class="ty">String</span>, <span class="ty">Data</span>)])
+    <span class="kw">case</span> miningChallenge(hashPrefix: <span class="ty">Data</span>, blockTargetDifficulty: <span class="ty">Data</span>, noncePrefix: <span class="ty">Data</span>)
+    <span class="kw">case</span> miningChallengeSolution(nonce: <span class="ty">UInt64</span>, hash: <span class="ty">Data</span>, blockNonce: <span class="ty">UInt64</span>?)
+
+    <span class="cm">// Peer Exchange</span>
+    <span class="kw">case</span> pexRequest(nonce: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> pexResponse(nonce: <span class="ty">UInt64</span>, peers: [<span class="ty">PeerEndpoint</span>])
+
+    <span class="cm">// Economic Layer</span>
+    <span class="kw">case</span> findPins(cid: <span class="ty">String</span>, fee: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> pins(announcements: [(publicKey: <span class="ty">String</span>, selector: <span class="ty">String</span>)])
+    <span class="kw">case</span> pinAnnounce(rootCID: <span class="ty">String</span>, selector: <span class="ty">String</span>, publicKey: <span class="ty">String</span>,
+                    expiry: <span class="ty">UInt64</span>, signature: <span class="ty">Data</span>, fee: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> pinStored(rootCID: <span class="ty">String</span>)
+    <span class="kw">case</span> feeExhausted(consumed: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> directOffer(cid: <span class="ty">String</span>, host: <span class="ty">String</span>, port: <span class="ty">UInt16</span>,
+                    size: <span class="ty">UInt64</span>, timeout: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> deliveryAck(requestId: <span class="ty">UInt64</span>)
+    <span class="kw">case</span> balanceCheck(sequence: <span class="ty">UInt64</span>, balance: <span class="ty">Int64</span>)
+    <span class="kw">case</span> balanceLog(fromSequence: <span class="ty">UInt64</span>,
+                   operations: [(sequence: <span class="ty">UInt64</span>, amount: <span class="ty">Int64</span>, requestId: <span class="ty">UInt64</span>)])
+    <span class="kw">case</span> peerMessage(topic: <span class="ty">String</span>, payload: <span class="ty">Data</span>)
+    <span class="kw">case</span> blocks(rootCID: <span class="ty">String</span>, items: [(cid: <span class="ty">String</span>, data: <span class="ty">Data</span>)])
+    <span class="kw">case</span> settlementProof(txHash: <span class="ty">String</span>, amount: <span class="ty">UInt64</span>, chainId: <span class="ty">String</span>)
 }</code></pre>
 
-    <h3>Message Types</h3>
+    <h3>Message Tags</h3>
     <table>
         <thead>
-            <tr><th>Tag</th><th>Message</th><th>Payload</th><th>Purpose</th></tr>
+            <tr><th>Tag</th><th>Message</th><th>Purpose</th></tr>
         </thead>
         <tbody>
-            <tr><td>0</td><td><code>ping</code></td><td>8 bytes: nonce</td><td>Liveness check</td></tr>
-            <tr><td>1</td><td><code>pong</code></td><td>8 bytes: nonce</td><td>Liveness response</td></tr>
-            <tr><td>2</td><td><code>wantBlock</code></td><td>2 + N bytes: CID</td><td>Request content by CID</td></tr>
-            <tr><td>3</td><td><code>block</code></td><td>2 + N + 4 + M bytes</td><td>Deliver content</td></tr>
-            <tr><td>4</td><td><code>dontHave</code></td><td>2 + N bytes: CID</td><td>Negative response</td></tr>
-            <tr><td>5</td><td><code>findNode</code></td><td>2 + N bytes: target hash</td><td>DHT peer lookup</td></tr>
-            <tr><td>6</td><td><code>neighbors</code></td><td>Variable: endpoint list</td><td>DHT lookup response</td></tr>
-            <tr><td>7</td><td><code>announceBlock</code></td><td>2 + N bytes: CID</td><td>Block availability</td></tr>
+            <tr><td>0</td><td><code>ping</code></td><td>Liveness check (8-byte nonce)</td></tr>
+            <tr><td>1</td><td><code>pong</code></td><td>Liveness response (echo nonce)</td></tr>
+            <tr><td>3</td><td><code>block</code></td><td>Deliver content by CID</td></tr>
+            <tr><td>4</td><td><code>dontHave</code></td><td>Negative response to content request</td></tr>
+            <tr><td>5</td><td><code>findNode</code></td><td>DHT peer lookup (with optional fee)</td></tr>
+            <tr><td>6</td><td><code>neighbors</code></td><td>DHT lookup response (endpoint list)</td></tr>
+            <tr><td>7</td><td><code>announceBlock</code></td><td>Block availability gossip</td></tr>
+            <tr><td>8</td><td><code>identify</code></td><td>Identity exchange with signature verification</td></tr>
+            <tr><td>11-14</td><td><code>getZoneInventory</code>, <code>zoneInventory</code>, <code>haveCIDs</code>, <code>haveCIDsResult</code></td><td>Zone sync and replication probes</td></tr>
+            <tr><td>16</td><td><code>dhtForward</code></td><td>Fee-aware content request with TTL, target, and selector</td></tr>
+            <tr><td>21-24</td><td><code>chainAnnounce</code>, <code>compactBlock</code>, <code>getBlockTxns</code>, <code>blockTxns</code></td><td>Chain synchronization</td></tr>
+            <tr><td>26-31</td><td><code>wantBlocks</code>, <code>newTxHashes</code>, <code>getTxns</code>, <code>txns</code>, <code>getBlockRange</code>, <code>blockRange</code></td><td>Bulk block and transaction sync</td></tr>
+            <tr><td>35-36</td><td><code>miningChallenge</code>, <code>miningChallengeSolution</code></td><td>Mining-based settlement</td></tr>
+            <tr><td>37-38</td><td><code>pexRequest</code>, <code>pexResponse</code></td><td>Peer exchange</td></tr>
+            <tr><td>40-51</td><td><code>findPins</code> ... <code>settlementProof</code></td><td>Economic layer (see below)</td></tr>
         </tbody>
     </table>
 
     <h3>Framing</h3>
-    <pre><code><span class="kw">public static func</span> <span class="fn">frame</span>(_ message: <span class="ty">Message</span>) -> <span class="ty">Data</span></code></pre>
-    <p>Wraps a serialized message in a 4-byte big-endian length prefix. Maximum frame size enforced at 64 MB.</p>
+    <p>Messages are wrapped in a 4-byte big-endian length prefix. Maximum frame size: 4 MB (<code>MessageLimits.maxFrameSize</code>).</p>
+
+    <h3>Message Limits</h3>
+    <table>
+        <thead>
+            <tr><th>Constant</th><th>Value</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>maxFrameSize</code></td><td>4 MB</td><td>Maximum single message size</td></tr>
+            <tr><td><code>maxStringLength</code></td><td>8,192</td><td>Maximum CID or string field length</td></tr>
+            <tr><td><code>maxNeighborCount</code></td><td>256</td><td>Maximum peers in a neighbors response</td></tr>
+            <tr><td><code>maxTxCIDCount</code></td><td>4,096</td><td>Maximum transaction CIDs in compact block</td></tr>
+            <tr><td><code>maxPexPeerCount</code></td><td>64</td><td>Maximum peers in a PEX response</td></tr>
+            <tr><td><code>maxDataPayload</code></td><td>4 MB</td><td>Maximum data payload size</td></tr>
+        </tbody>
+    </table>
+
+    <h2 id="economics">Fee Model</h2>
+    <p>Ivy uses a <strong>fee-bid model</strong> for content routing. The requester sets a total fee budget; each relay hop deducts its <code>relayFee</code> and forwards the remainder. The destination (the node that actually has the content) keeps whatever fee remains.</p>
+
+    <h3>How Fee-Based Forwarding Works</h3>
+    <ol>
+        <li><strong>Request</strong>: Node A calls <code>get(cid:fee:)</code>. This sends a <code>dhtForward(cid, ttl, fee, target?, selector?)</code> to the closest peers.</li>
+        <li><strong>Relay Check</strong>: Each relay node checks two gates -- <strong>behavioral</strong> (Tally reputation: <code>shouldAllow</code>) and <strong>economic</strong> (credit line: <code>availableCapacity &gt; 0</code>).</li>
+        <li><strong>Local Hit</strong>: If the relay has the block in its cache or local storage, it responds immediately and earns the full remaining fee.</li>
+        <li><strong>Forward</strong>: If the relay does not have the block and <code>fee &gt; relayFee</code>, it deducts <code>relayFee</code>, records a pending forward, and sends the request onward to the closest peer toward the target hash.</li>
+        <li><strong>Fee Exhausted</strong>: If <code>fee &lt;= relayFee</code> and the relay cannot serve the content, it sends <code>feeExhausted(consumed:)</code> back.</li>
+    </ol>
+
+    <h3>Pay-on-Success</h3>
+    <p>Fees are only charged when a response successfully relays back through the chain. When a <code>.block</code> response arrives at a relay node:</p>
+    <ol>
+        <li>The relay forwards the block to the upstream requester.</li>
+        <li>The relay calls <code>ledger.earnFromRelay(peer:amount:)</code> to credit its relay fee against the upstream peer's credit line.</li>
+        <li>The block is cached locally for future requests.</li>
+    </ol>
+    <p>If no response arrives (timeout), no fees are charged.</p>
+
+    <h3>Targeted Requests</h3>
+    <p><code>dhtForward</code> supports an optional <code>target</code> (a peer hash to route toward) and <code>selector</code> (a path selector for sub-DAG traversal). When <code>target</code> is set, the request is routed toward that peer's hash neighborhood rather than the CID's hash neighborhood. This is used by <code>get(cid:target:fee:)</code> after discovering a pinner.</p>
+
+    <div class="diagram">A ----dhtForward(cid, fee=20)----&gt; B ----dhtForward(cid, fee=19)----&gt; C ----dhtForward(cid, fee=18)----&gt; Z (has block)
+                                       |                                  |                                  |
+                                       |  &lt;------block(cid, data)-------- | &lt;-------block(cid, data)-------- |
+                                       |   B earns 1 (relayFee)           |  C earns 1 (relayFee)            Z earns 18
+A receives block</div>
+
+    <h2 id="credit-lines">Credit Lines</h2>
+    <p>Every peer pair shares a <code>CreditLine</code> managed by the <code>CreditLineLedger</code> actor. Credit lines track the net balance of services rendered between two peers and determine when settlement is required.</p>
+
+    <h3>CreditLineLedger</h3>
+    <p><span class="badge actor">actor</span></p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">CreditLineLedger</span> {
+    <span class="kw">public init</span>(localID: <span class="ty">PeerID</span>, baseThresholdMultiplier: <span class="ty">UInt64</span> = <span class="num">100</span>)
+}</code></pre>
+
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>establish(with:)</code></td><td>Create a credit line for a peer. The initial threshold is computed from the peer's public key difficulty (trailing zero bits) multiplied by <code>baseThresholdMultiplier</code>.</td></tr>
+            <tr><td><code>creditLine(for:)</code></td><td>Return the <code>CreditLine</code> for a peer, if established.</td></tr>
+            <tr><td><code>chargeForRelay(peer:amount:)</code></td><td>Debit the peer's credit line (decrease balance).</td></tr>
+            <tr><td><code>earnFromRelay(peer:amount:)</code></td><td>Credit the local node's side of the credit line (increase balance).</td></tr>
+            <tr><td><code>balance(with:)</code></td><td>Current net balance with a peer.</td></tr>
+            <tr><td><code>threshold(for:)</code></td><td>Current settlement threshold for a peer.</td></tr>
+            <tr><td><code>needsSettlement(peer:)</code></td><td>True when <code>|balance| &gt;= threshold</code>.</td></tr>
+            <tr><td><code>recordSettlement(peer:)</code></td><td>Reset balance to zero and grow the threshold (trust increases with successful settlements).</td></tr>
+            <tr><td><code>recordPartialSettlement(peer:workValue:)</code></td><td>Reduce the outstanding balance by a work value (from mining solutions or on-chain proofs).</td></tr>
+            <tr><td><code>recordMissedSettlement(peer:)</code></td><td>Halve the threshold (trust decreases).</td></tr>
+        </tbody>
+    </table>
+
+    <h3>CreditLine</h3>
+    <pre><code><span class="kw">public struct</span> <span class="ty">CreditLine</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> peerA: <span class="ty">PeerID</span>
+    <span class="kw">public let</span> peerB: <span class="ty">PeerID</span>
+    <span class="kw">public private(set) var</span> balance: <span class="ty">Int64</span>
+    <span class="kw">public private(set) var</span> sequence: <span class="ty">UInt64</span>
+    <span class="kw">public private(set) var</span> threshold: <span class="ty">UInt64</span>
+    <span class="kw">public private(set) var</span> successfulSettlements: <span class="ty">UInt64</span>
+
+    <span class="kw">public var</span> needsSettlement: <span class="ty">Bool</span>     <span class="cm">// |balance| >= threshold</span>
+    <span class="kw">public var</span> availableCapacity: <span class="ty">Int64</span> <span class="cm">// threshold - |balance|</span>
+}</code></pre>
+
+    <h3>Trust Bootstrapping</h3>
+    <p>Initial credit line thresholds are derived from the peer's public key difficulty -- the number of trailing zero bits in the key's hex representation. Keys with more trailing zeros required more computational work to generate, so they receive higher initial trust:</p>
+    <pre><code>threshold = baseTrust(publicKey) * baseThresholdMultiplier</code></pre>
+    <p>Subsequent successful settlements grow the threshold logarithmically. Missed settlements halve it.</p>
+
+    <h3>Balance Reconciliation</h3>
+    <p>Peers can exchange <code>balanceCheck(sequence:balance:)</code> messages to verify they agree on the credit line state. Divergences are logged for investigation. The <code>balanceLog</code> message allows a peer to request a replay of recent operations for auditing.</p>
+
+    <h2 id="pin-discovery">Pin Discovery</h2>
+    <p>Pin discovery allows nodes to advertise that they store (pin) certain content, and other nodes to find those pinners.</p>
+
+    <h3>Publishing a Pin</h3>
+    <ol>
+        <li>Call <code>save(cid:data:pin:true)</code> or <code>publishPinAnnounce(rootCID:selector:expiry:signature:fee:)</code>.</li>
+        <li>This sends <code>pinAnnounce</code> messages to the <code>k</code> closest peers to the CID's hash. Those peers store the announcement in their <code>pinAnnouncements</code> table.</li>
+        <li>The receiving peer replies with <code>pinStored(rootCID:)</code> to confirm storage.</li>
+    </ol>
+
+    <h3>Finding Pinners</h3>
+    <ol>
+        <li>Call <code>discoverPinners(cid:fee:)</code>.</li>
+        <li>This sends fee-based <code>findPins(cid:fee:)</code> messages toward the CID's hash neighborhood.</li>
+        <li>Relay nodes that have stored pin announcements respond with <code>pins(announcements:)</code> and earn the fee. Otherwise they forward (deducting their relay fee) toward closer peers.</li>
+        <li>Results arrive via the delegate callback <code>ivy(_:didReceiveMessage:from:)</code> as <code>.pins</code> messages.</li>
+    </ol>
+
+    <h3>Fetching from a Specific Pinner</h3>
+    <p>Once you know a pinner's public key (from <code>discoverPinners</code>), use <code>get(cid:target:fee:)</code> to route the request toward that specific peer rather than the CID hash:</p>
+    <pre><code><span class="kw">let</span> pinners = <span class="kw">await</span> ivy.discoverPinners(cid: myCID)
+<span class="kw">if let</span> first = pinners.first {
+    <span class="kw">let</span> target = <span class="ty">PeerID</span>(publicKey: first.publicKey)
+    <span class="kw">let</span> data = <span class="kw">await</span> ivy.get(cid: myCID, target: target)
+}</code></pre>
+
+    <h2 id="settlement">Settlement</h2>
+    <p>When a credit line's <code>|balance|</code> reaches its <code>threshold</code>, the debtor must settle. Ivy supports two settlement mechanisms:</p>
+
+    <h3>Mining Settlement</h3>
+    <ol>
+        <li>The creditor issues a <code>miningChallenge(hashPrefix:blockTargetDifficulty:noncePrefix:)</code> to the debtor.</li>
+        <li>The debtor performs proof-of-work and responds with <code>miningChallengeSolution(nonce:hash:blockNonce:)</code>.</li>
+        <li>The creditor verifies the work. The work value is <code>2^(trailingZeroBits(hash) - 16)</code> ivy. This amount is credited against the outstanding balance via <code>recordPartialSettlement</code>.</li>
+        <li>If the balance reaches zero, the credit line is fully settled via <code>recordSettlement()</code>, which resets the balance and grows the threshold.</li>
+    </ol>
+
+    <h3>On-Chain Settlement</h3>
+    <ol>
+        <li>The debtor submits an on-chain transaction and sends <code>settlementProof(txHash:amount:chainId:)</code> to the creditor.</li>
+        <li>The creditor records the partial settlement and checks if the balance is now settled.</li>
+    </ol>
+
+    <h3>Missed Settlements</h3>
+    <p>If a debtor fails to settle, the creditor calls <code>recordMissedSettlement(peer:)</code>, which halves the credit line threshold. This limits the debtor's future capacity until trust is rebuilt.</p>
 
     <h2>IvyConfig</h2>
     <pre><code><span class="kw">public struct</span> <span class="ty">IvyConfig</span>: <span class="ty">Sendable</span> {
     <span class="kw">public let</span> publicKey: <span class="ty">String</span>
-    <span class="kw">public let</span> listenPort: <span class="ty">UInt16</span>             <span class="cm">// default: 4001</span>
-    <span class="kw">public let</span> bootstrapPeers: [<span class="ty">PeerEndpoint</span>] <span class="cm">// default: []</span>
-    <span class="kw">public let</span> enableLocalDiscovery: <span class="ty">Bool</span>     <span class="cm">// default: true</span>
-    <span class="kw">public let</span> tallyConfig: <span class="ty">TallyConfig</span>       <span class="cm">// default: .default</span>
-    <span class="kw">public let</span> kBucketSize: <span class="ty">Int</span>              <span class="cm">// default: 20</span>
-    <span class="kw">public let</span> maxConcurrentRequests: <span class="ty">Int</span>    <span class="cm">// default: 6</span>
-    <span class="kw">public let</span> requestTimeout: <span class="ty">Duration</span>      <span class="cm">// default: 15s</span>
-    <span class="kw">public let</span> serviceType: <span class="ty">String</span>           <span class="cm">// default: "_ivy._tcp"</span>
+    <span class="kw">public let</span> listenPort: <span class="ty">UInt16</span>                  <span class="cm">// default: 4001</span>
+    <span class="kw">public let</span> bootstrapPeers: [<span class="ty">PeerEndpoint</span>]      <span class="cm">// default: []</span>
+    <span class="kw">public let</span> enableLocalDiscovery: <span class="ty">Bool</span>          <span class="cm">// default: true</span>
+    <span class="kw">public let</span> tallyConfig: <span class="ty">TallyConfig</span>            <span class="cm">// default: .default</span>
+    <span class="kw">public let</span> kBucketSize: <span class="ty">Int</span>                   <span class="cm">// default: 20</span>
+    <span class="kw">public let</span> maxConcurrentRequests: <span class="ty">Int</span>         <span class="cm">// default: 6</span>
+    <span class="kw">public let</span> requestTimeout: <span class="ty">Duration</span>           <span class="cm">// default: 15s</span>
+    <span class="kw">public let</span> relayTimeout: <span class="ty">Duration</span>             <span class="cm">// default: 5s</span>
+    <span class="kw">public let</span> serviceType: <span class="ty">String</span>                <span class="cm">// default: "_ivy._tcp"</span>
+    <span class="kw">public let</span> stunServers: [(<span class="ty">String</span>, <span class="ty">Int</span>)]       <span class="cm">// default: STUNClient.defaultServers</span>
+    <span class="kw">public let</span> defaultTTL: <span class="ty">UInt8</span>                  <span class="cm">// default: 7</span>
+    <span class="kw">public let</span> healthConfig: <span class="ty">PeerHealthConfig</span>      <span class="cm">// default: .default</span>
+    <span class="kw">public let</span> enablePEX: <span class="ty">Bool</span>                    <span class="cm">// default: true</span>
+    <span class="kw">public let</span> pexInterval: <span class="ty">Duration</span>              <span class="cm">// default: 120s</span>
+    <span class="kw">public let</span> pexMaxPeers: <span class="ty">Int</span>                   <span class="cm">// default: 16</span>
+    <span class="kw">public let</span> replicationInterval: <span class="ty">Duration</span>      <span class="cm">// default: 300s</span>
+    <span class="kw">public let</span> replicationMinCopies: <span class="ty">Int</span>          <span class="cm">// default: 3</span>
+    <span class="kw">public let</span> replicationSampleSize: <span class="ty">Int</span>         <span class="cm">// default: 32</span>
+    <span class="kw">public let</span> zoneSyncLimit: <span class="ty">UInt16</span>              <span class="cm">// default: 256</span>
+    <span class="kw">public let</span> zoneSyncInterval: <span class="ty">Duration</span>         <span class="cm">// default: 1800s</span>
+    <span class="kw">public let</span> maxChainAnnounceHops: <span class="ty">UInt8</span>        <span class="cm">// default: 10</span>
+    <span class="kw">public let</span> signingKey: <span class="ty">Data</span>                   <span class="cm">// default: Data() (32 bytes for Curve25519)</span>
+    <span class="kw">public let</span> logger: <span class="kw">any</span> <span class="ty">IvyLogger</span>              <span class="cm">// default: NullLogger()</span>
+    <span class="kw">public let</span> relayFee: <span class="ty">UInt64</span>                   <span class="cm">// default: 1</span>
+    <span class="kw">public let</span> baseThresholdMultiplier: <span class="ty">UInt64</span>    <span class="cm">// default: 100</span>
+    <span class="kw">public let</span> defaultRequestFee: <span class="ty">UInt64</span>          <span class="cm">// default: 20</span>
 }</code></pre>
 
+    <h3>PeerHealthConfig</h3>
+    <pre><code><span class="kw">public struct</span> <span class="ty">PeerHealthConfig</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> keepaliveInterval: <span class="ty">Duration</span>  <span class="cm">// default: 60s</span>
+    <span class="kw">public let</span> staleTimeout: <span class="ty">Duration</span>       <span class="cm">// default: 180s</span>
+    <span class="kw">public let</span> maxMissedPongs: <span class="ty">Int</span>          <span class="cm">// default: 3</span>
+    <span class="kw">public let</span> enabled: <span class="ty">Bool</span>                <span class="cm">// default: true</span>
+}</code></pre>
+    <p>The health monitor periodically pings peers that have been idle longer than <code>keepaliveInterval</code>. Peers that exceed <code>staleTimeout</code> or miss <code>maxMissedPongs</code> consecutive pings are disconnected.</p>
+
     <h2>IvyDelegate</h2>
-    <p>Optional protocol for receiving lifecycle and content events:</p>
+    <p>Optional protocol for receiving lifecycle, content, and economic events:</p>
 
     <pre><code><span class="kw">public protocol</span> <span class="ty">IvyDelegate</span>: <span class="ty">AnyObject</span>, <span class="ty">Sendable</span> {
     <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didConnect peer: <span class="ty">PeerID</span>)
     <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didDisconnect peer: <span class="ty">PeerID</span>)
     <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didReceiveBlockAnnouncement cid: <span class="ty">String</span>, from peer: <span class="ty">PeerID</span>)
     <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didReceiveBlock cid: <span class="ty">String</span>, data: <span class="ty">Data</span>, from peer: <span class="ty">PeerID</span>)
+    <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didDiscoverPublicAddress address: <span class="ty">ObservedAddress</span>)
+    <span class="kw">func</span> <span class="fn">ivy</span>(_ ivy: <span class="ty">Ivy</span>, didReceiveMessage message: <span class="ty">Message</span>, from peer: <span class="ty">PeerID</span>)
 }</code></pre>
-    <p>All methods have default empty implementations — implement only the ones you need.</p>
+    <p>All methods have default empty implementations -- implement only the ones you need. The <code>didReceiveMessage</code> callback is the primary entry point for handling economic layer messages (<code>.pins</code>, <code>.pinStored</code>, <code>.feeExhausted</code>, <code>.directOffer</code>, <code>.balanceLog</code>, <code>.peerMessage</code>, <code>.settlementProof</code>, <code>.miningChallenge</code>, etc.).</p>
 
     <h2 id="network-worker">NetworkCASWorker</h2>
     <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
     <p>Bridges the Ivy network layer into the <code>AcornCASWorker</code> chain. When the local chain misses, this worker asks the peer network.</p>
 
     <pre><code><span class="kw">public actor</span> <span class="ty">NetworkCASWorker</span>: <span class="ty">AcornCASWorker</span> {
+    <span class="kw">public var</span> near: (<span class="kw">any</span> <span class="ty">AcornCASWorker</span>)?
+    <span class="kw">public var</span> far: (<span class="kw">any</span> <span class="ty">AcornCASWorker</span>)?
     <span class="kw">public var</span> timeout: <span class="ty">Duration</span>? { .seconds(<span class="num">30</span>) }
 }</code></pre>
 
@@ -328,18 +648,67 @@
         <tbody>
             <tr>
                 <td><code>has(cid:)</code></td>
-                <td>Attempts to fetch from network, returns true if found.</td>
+                <td>Checks <code>near</code> worker first, then attempts to fetch from network. Returns true if found in either.</td>
             </tr>
             <tr>
                 <td><code>getLocal(cid:)</code></td>
-                <td>Calls <code>Ivy.fetchBlock(cid:)</code> — selects closest, highest-reputation peers, sends <code>.wantBlock</code>, waits for <code>.block</code> response or timeout.</td>
+                <td>Calls <code>Ivy.fetchBlock(cid:)</code> -- tries DHT forwarding to closest peers, then attempts new connections to known-but-unconnected peers.</td>
             </tr>
             <tr>
                 <td><code>storeLocal(cid:data:)</code></td>
                 <td>No-op. Network is read-only in the chain model.</td>
             </tr>
+            <tr>
+                <td><code>setNear(_:)</code></td>
+                <td>Connect an external <code>AcornCASWorker</code> (e.g., local disk or memory storage) so <code>has(cid:)</code> checks local storage before hitting the network.</td>
+            </tr>
         </tbody>
     </table>
+
+    <h2>VerifiedDistanceStore</h2>
+    <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
+    <p>A CAS worker wrapper that only stores content within a bounded XOR distance from the node. This creates Kademlia-style storage zones where each node is responsible for content near its own hash. Supports eviction protection for pinned content.</p>
+
+    <pre><code><span class="kw">public actor</span> <span class="ty">VerifiedDistanceStore</span>: <span class="ty">AcornCASWorker</span> {
+    <span class="kw">public init</span>(
+        inner: <span class="kw">any</span> <span class="ty">AcornCASWorker</span>,
+        nodePublicKey: <span class="ty">String</span>,
+        maxEntries: <span class="ty">Int</span> = <span class="num">100_000</span>,
+        protectionPolicy: <span class="kw">any</span> <span class="ty">EvictionProtectionPolicy</span> = <span class="ty">NoProtection</span>()
+    )
+}</code></pre>
+
+    <table>
+        <thead>
+            <tr><th>Method</th><th>Behavior</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>storeLocal(cid:data:)</code></td><td>Verifies the CID matches the data hash, then stores only if the content is closer than the most distant existing entry (or if capacity remains). Protected CIDs are always stored.</td></tr>
+            <tr><td><code>getLocal(cid:)</code></td><td>Retrieves data and verifies the CID matches before returning.</td></tr>
+            <tr><td><code>storeVerified(cid:data:)</code></td><td>Store without eviction checks (for replication).</td></tr>
+            <tr><td><code>xorDistance(to:)</code></td><td>XOR distance from this node to a CID hash.</td></tr>
+            <tr><td><code>isCloserThan(cid:threshold:)</code></td><td>Check if a CID is within a distance threshold.</td></tr>
+            <tr><td><code>storedCIDsClosestTo(hash:limit:)</code></td><td>Return stored CIDs closest to a target hash (for zone inventory responses).</td></tr>
+            <tr><td><code>sampleStoredCIDs(count:)</code></td><td>Random sample of stored CIDs (for replication probes).</td></tr>
+        </tbody>
+    </table>
+
+    <p>Eviction uses random sampling (sqrt(n) samples, min 16, max 128) to find the most distant unprotected entry, avoiding a full scan of the entry table.</p>
+
+    <h2>Peer Exchange (PEX)</h2>
+    <p>PEX provides network resiliency by allowing peers to discover new peers through their existing connections, reducing dependence on bootstrap nodes.</p>
+    <ol>
+        <li>Periodically (default every 120s), a node selects a random connected peer and sends <code>pexRequest(nonce:)</code>.</li>
+        <li>The recipient responds with <code>pexResponse(nonce:peers:)</code> containing up to <code>pexMaxPeers</code> (default 16) peer endpoints, selected from peers closest to the requester's hash (excluding loopback and local addresses).</li>
+        <li>The requester adds new peers to its routing table and attempts to connect.</li>
+    </ol>
+
+    <h2>Zone Sync and Replication</h2>
+    <p>Two background processes ensure data redundancy across the DHT:</p>
+    <h3>Zone Sync</h3>
+    <p>Periodically (default every 30 minutes), the node asks its closest DHT neighbors for their zone inventory via <code>getZoneInventory(nodeHash:limit:)</code>. Any CIDs the node does not have are fetched.</p>
+    <h3>Proactive Replication</h3>
+    <p>Periodically (default every 5 minutes), the node samples stored CIDs and probes zone-relevant peers via <code>haveCIDs</code> to check replica counts. Under-replicated blocks (fewer than <code>replicationMinCopies</code>, default 3) are pushed to the closest peers that lack them.</p>
 
     <h2>Local Discovery</h2>
     <p>On Apple platforms (<code>#if canImport(Network)</code>), Ivy can discover peers on the local network via Bonjour/mDNS:</p>
@@ -355,13 +724,15 @@
     </div>
 
     <h2>Content Routing Flow</h2>
-    <p>When <code>NetworkCASWorker.getLocal(cid:)</code> is called:</p>
+    <p>When <code>get(cid:fee:)</code> is called:</p>
     <ol>
-        <li><strong>Peer selection</strong>: <code>Router.closestPeers(to: hash(cid))</code> finds peers near the content in the keyspace</li>
-        <li><strong>Reputation ranking</strong>: Candidates are filtered to connected peers and sorted by <code>Tally.reputation()</code></li>
-        <li><strong>Parallel requests</strong>: Up to <code>maxConcurrentRequests</code> (default 6) peers are asked simultaneously via <code>.wantBlock</code></li>
-        <li><strong>First response wins</strong>: The first <code>.block</code> response resolves the request; the timeout (default 15s) resolves to nil</li>
-        <li><strong>Metrics recorded</strong>: Latency, success/failure, and bytes transferred are recorded in Tally for each peer</li>
+        <li><strong>Local check</strong>: Block cache and local CAS storage are checked first.</li>
+        <li><strong>Fee-based DHT forward</strong>: <code>dhtForward(cid, ttl, fee)</code> is sent to the closest peers in the CID's hash neighborhood.</li>
+        <li><strong>Dual-gated relay</strong>: Each relay checks Tally reputation (behavioral) and credit line capacity (economic) before forwarding.</li>
+        <li><strong>Relay fee deduction</strong>: Each hop deducts <code>relayFee</code> (default 1) from the fee budget and forwards the remainder.</li>
+        <li><strong>First response wins</strong>: The first <code>.block</code> response resolves the request; the timeout (default 15s) resolves to nil.</li>
+        <li><strong>Pay-on-success</strong>: Fees are only charged when the response successfully relays back through the chain.</li>
+        <li><strong>Caching</strong>: Responded blocks are cached locally in the block cache and optionally stored in the local CAS worker.</li>
     </ol>
 </main>
 
