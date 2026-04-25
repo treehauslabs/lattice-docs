@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Memory Worker — Lattice Docs</title>
+    <title>MemoryBroker — Lattice Docs</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -23,7 +23,7 @@
         <a href="roadmap.html">Roadmap</a>
         <a href="lattice.html">Lattice</a>
         <a href="cashew.html">Cashew</a>
-        <a href="acorn.html">Acorn</a>
+        <a href="acorn.html">VolumeBroker</a>
         <a href="tally.html">Tally</a>
         <a href="ivy.html">Ivy</a>
     </nav>
@@ -46,19 +46,19 @@
     <div class="section-title">Blockchain</div>
     <a href="lattice.html">Lattice</a>
     <a href="cashew.html">Cashew</a>
-    <a href="acorn.html">Acorn</a>
-    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
-    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
-    <a href="acorn.html#composite" class="nested">Composite Worker</a>
-    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+    <a href="acorn.html">VolumeBroker</a>
+    <a href="acorn.html#volume-broker" class="nested">VolumeBroker Protocol</a>
+    <a href="acorn.html#volume-payload" class="nested">Volume Payload</a>
+    <a href="acorn.html#pin-lifecycle" class="nested">Pin Lifecycle</a>
+    <a href="acorn.html#broker-fetcher" class="nested">BrokerFetcher / BrokerStorer</a>
 
     <div class="section-title">Storage</div>
-    <a href="memory-worker.html">Memory Worker</a>
-    <a href="memory-worker.html#sync-api" class="nested">Sync API</a>
-    <a href="memory-worker.html#async-api" class="nested">Async API</a>
-    <a href="disk-worker.html">Disk Worker</a>
-    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
-    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+    <a href="memory-worker.html">MemoryBroker</a>
+    <a href="memory-worker.html#lru-eviction" class="nested">LRU Eviction</a>
+    <a href="memory-worker.html#pin-aware" class="nested">Pin-Aware Eviction</a>
+    <a href="disk-worker.html">DiskBroker</a>
+    <a href="disk-worker.html#sqlite-schema" class="nested">SQLite Schema</a>
+    <a href="disk-worker.html#wal-journaling" class="nested">WAL Journaling</a>
 
     <div class="section-title">Reputation</div>
     <a href="tally.html">Tally</a>
@@ -76,21 +76,17 @@
 </aside>
 
 <main class="main">
-    <h1>AcornMemoryWorker <span class="pkg-badge worker">Storage</span></h1>
-    <p class="subtitle">In-memory content-addressable storage with nanosecond-scale synchronous reads and optional LFU eviction.</p>
+    <h1>MemoryBroker <span class="pkg-badge worker">Storage</span></h1>
+    <p class="subtitle">In-memory Volume broker with LRU eviction, capacity cap, and pin-aware cache management. Pinned Volumes are never evicted regardless of cache pressure.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/AcornMemoryWorker.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/MemoryBroker.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
 
-    <h2>MemoryCASWorker</h2>
-    <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
+    <h2>MemoryBroker</h2>
+    <p><span class="badge actor">actor</span> <span class="badge protocol">VolumeBroker</span></p>
 
-    <pre><code><span class="kw">public actor</span> <span class="ty">MemoryCASWorker</span>: <span class="ty">AcornCASWorker</span> {
+    <pre><code><span class="kw">public actor</span> <span class="ty">MemoryBroker</span>: <span class="ty">VolumeBroker</span> {
     <span class="kw">public init</span>(
-        capacity: <span class="ty">Int</span>? = <span class="kw">nil</span>,
-        maxBytes: <span class="ty">Int</span>? = <span class="kw">nil</span>,
-        halfLife: <span class="ty">Duration</span> = .seconds(<span class="num">300</span>),
-        sampleSize: <span class="ty">Int</span> = <span class="num">5</span>,
-        timeout: <span class="ty">Duration</span>? = <span class="kw">nil</span>
+        capacity: <span class="ty">Int</span>? = <span class="kw">nil</span>
     )
 }</code></pre>
 
@@ -99,81 +95,68 @@
         <div class="param">
             <span class="param-name">capacity</span>
             <span class="param-type">Int?</span>
-            <span class="param-desc">Maximum number of entries. When exceeded, LFU eviction kicks in. Nil for unbounded.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">maxBytes</span>
-            <span class="param-type">Int?</span>
-            <span class="param-desc">Maximum total bytes in memory. Nil for unbounded.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">halfLife</span>
-            <span class="param-type">Duration</span>
-            <span class="param-desc">Time for LFU scores to decay to 50%. Default 300 seconds.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">sampleSize</span>
-            <span class="param-type">Int</span>
-            <span class="param-desc">Number of random candidates to sample during eviction. Default 5.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">timeout</span>
-            <span class="param-type">Duration?</span>
-            <span class="param-desc">Timeout for chain traversal operations. Nil for no timeout.</span>
+            <span class="param-desc">Maximum number of Volumes to hold in memory. When exceeded, the least-recently-used unpinned Volume is evicted. Nil for unbounded.</span>
         </div>
     </div>
+
+    <h2 id="lru-eviction">LRU Eviction</h2>
+    <p>MemoryBroker uses a Least-Recently-Used eviction policy. Each <code>fetchVolumeLocal</code> or <code>storeVolumeLocal</code> call moves the accessed Volume to the head of the LRU list. When the number of stored Volumes exceeds <code>capacity</code>, the tail of the list is scanned for eviction candidates.</p>
+
+    <h3>Eviction Order</h3>
+    <ol>
+        <li>Start from the LRU tail (least recently accessed Volume)</li>
+        <li>Skip any Volume that has at least one active, non-expired pin</li>
+        <li>Evict the first unpinned Volume found</li>
+        <li>Repeat until the Volume count is at or below <code>capacity</code></li>
+    </ol>
 
     <div class="callout info">
-        <div class="callout-title">Dual API</div>
-        MemoryCASWorker provides two ways to access data: <strong>async methods</strong> (via the actor, ~7.5µs) and <strong>sync methods</strong> (via internal lock, 3–28ns). Both access the same underlying state and are safe to use concurrently.
+        <div class="callout-title">Capacity vs. unbounded</div>
+        Passing <code>nil</code> for <code>capacity</code> creates an unbounded in-memory cache with no eviction. Useful for short-lived processes or tests where memory is not a concern. In production, set a capacity to bound RSS.
     </div>
 
-    <h2 id="sync-api">Sync API</h2>
-    <p>Marked <code>nonisolated</code> — bypasses the actor executor and accesses the internal <code>OSAllocatedUnfairLock</code> directly. Use these on hot paths.</p>
+    <h2 id="pin-aware">Pin-Aware Eviction</h2>
+    <p>MemoryBroker stores pin state as a dictionary of <code>PinEntry</code> values, keyed by <code>(root, owner)</code>.</p>
 
+    <pre><code><span class="kw">public struct</span> <span class="ty">PinEntry</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public var</span> count: <span class="ty">Int</span>
+    <span class="kw">public var</span> expiresAt: <span class="ty">Date</span>?
+}</code></pre>
+
+    <h3>Pin Behavior</h3>
     <table>
         <thead>
-            <tr><th>Method</th><th>Return</th><th>Latency</th></tr>
+            <tr><th>Operation</th><th>Effect</th></tr>
         </thead>
         <tbody>
             <tr>
-                <td><code>syncHas(cid:)</code></td>
-                <td><code>Bool</code></td>
-                <td>3–11 ns</td>
+                <td><code>pin(root:owner:count:ttl:)</code></td>
+                <td>Creates or increments a <code>PinEntry</code> for <code>(root, owner)</code>. If <code>ttl</code> is provided, sets <code>expiresAt</code> to <code>now + ttl</code>.</td>
             </tr>
             <tr>
-                <td><code>syncGet(cid:)</code></td>
-                <td><code>Data?</code></td>
-                <td>6–28 ns</td>
+                <td><code>unpin(root:owner:count:)</code></td>
+                <td>Decrements the pin count. If the count reaches zero, the <code>PinEntry</code> is removed.</td>
             </tr>
             <tr>
-                <td><code>syncStore(cid:data:)</code></td>
-                <td><code>Void</code></td>
-                <td>142 ns (733 ns with eviction)</td>
+                <td><code>unpinAll(owner:)</code></td>
+                <td>Removes all <code>PinEntry</code> values for the given owner across all roots.</td>
             </tr>
             <tr>
-                <td><code>syncDelete(cid:)</code></td>
-                <td><code>Void</code></td>
-                <td>78 ns</td>
+                <td><code>evictUnpinned()</code></td>
+                <td>Removes all Volumes that have no active pins (no entries, or all entries expired or at count zero).</td>
             </tr>
         </tbody>
     </table>
 
-    <pre><code><span class="kw">let</span> worker = <span class="ty">MemoryCASWorker</span>(capacity: <span class="num">10_000</span>)
+    <h3>Eviction and Pins</h3>
+    <p>A Volume is considered <strong>pinned</strong> if it has at least one <code>PinEntry</code> where <code>count > 0</code> and either <code>expiresAt</code> is nil (no expiry) or <code>expiresAt > now</code>. Pinned Volumes are skipped during LRU eviction.</p>
 
-<span class="cm">// No async/await needed</span>
-worker.syncStore(cid: cid, data: payload)
+    <div class="callout warn">
+        <div class="callout-title">Capacity saturation</div>
+        If all Volumes in the cache are pinned, eviction cannot free space. New stores will exceed the capacity cap until pins are released. Monitor the <code>owners</code> property and pin counts to avoid unbounded growth.
+    </div>
 
-<span class="kw">if let</span> data = worker.syncGet(cid: cid) {
-    process(data)
-}
-
-<span class="kw">if</span> worker.syncHas(cid: cid) {
-    <span class="cm">// exists</span>
-}</code></pre>
-
-    <h2 id="async-api">Async API</h2>
-    <p>Standard <code>AcornCASWorker</code> protocol methods. These go through the actor executor (~7µs overhead) but compose naturally with the chain.</p>
+    <h2>Methods</h2>
 
     <table>
         <thead>
@@ -181,28 +164,16 @@ worker.syncStore(cid: cid, data: payload)
         </thead>
         <tbody>
             <tr>
-                <td><code>has(cid:)</code> <span class="badge async">async</span></td>
-                <td>Check existence. Same logic as <code>syncHas</code>.</td>
+                <td><code>hasVolume(root:)</code> <span class="badge async">async</span></td>
+                <td>Check if a Volume with the given root exists in memory.</td>
             </tr>
             <tr>
-                <td><code>getLocal(cid:)</code> <span class="badge async">async</span></td>
-                <td>Retrieve data from local store. Updates LFU scores and metrics.</td>
+                <td><code>fetchVolumeLocal(root:)</code> <span class="badge async">async</span></td>
+                <td>Retrieve a Volume from memory. Moves it to the LRU head on access.</td>
             </tr>
             <tr>
-                <td><code>storeLocal(cid:data:)</code> <span class="badge async">async</span></td>
-                <td>Store data locally. Handles eviction if at capacity.</td>
-            </tr>
-            <tr>
-                <td><code>delete(cid:)</code></td>
-                <td>Remove an entry. Updates metrics, byte tracking, and LFU cache.</td>
-            </tr>
-            <tr>
-                <td><code>get(cid:)</code> <span class="badge async">async</span></td>
-                <td><em>Protocol default.</em> Walks chain: near → local → backfill.</td>
-            </tr>
-            <tr>
-                <td><code>store(cid:data:)</code> <span class="badge async">async</span></td>
-                <td><em>Protocol default.</em> Stores locally, propagates to near.</td>
+                <td><code>storeVolumeLocal(_:)</code> <span class="badge async">async</span></td>
+                <td>Store a Volume in memory. Triggers LRU eviction if at capacity.</td>
             </tr>
         </tbody>
     </table>
@@ -213,56 +184,16 @@ worker.syncStore(cid: cid, data: payload)
             <tr><th>Property</th><th>Type</th><th>Description</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>metrics</code></td><td><code>CASMetrics</code></td><td>Hit/miss/store/eviction/deletion counts</td></tr>
-            <tr><td><code>totalBytes</code></td><td><code>Int</code></td><td>Current total bytes stored in memory</td></tr>
-            <tr><td><code>timeout</code></td><td><code>Duration?</code></td><td>Timeout for chain operations</td></tr>
-            <tr><td><code>near</code></td><td><code>(any AcornCASWorker)?</code></td><td>Faster adjacent worker in chain</td></tr>
-            <tr><td><code>far</code></td><td><code>(any AcornCASWorker)?</code></td><td>Slower adjacent worker in chain</td></tr>
+            <tr><td><code>owners</code></td><td><code>Set&lt;String&gt;</code></td><td>All owners that currently hold at least one active pin</td></tr>
+            <tr><td><code>count</code></td><td><code>Int</code></td><td>Number of Volumes currently stored</td></tr>
+            <tr><td><code>capacity</code></td><td><code>Int?</code></td><td>Configured capacity cap (nil if unbounded)</td></tr>
         </tbody>
     </table>
-
-    <h2>CASMetrics</h2>
-    <pre><code><span class="kw">public struct</span> <span class="ty">CASMetrics</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span> {
-    <span class="kw">public var</span> hits: <span class="ty">Int</span>
-    <span class="kw">public var</span> misses: <span class="ty">Int</span>
-    <span class="kw">public var</span> stores: <span class="ty">Int</span>
-    <span class="kw">public var</span> evictions: <span class="ty">Int</span>
-    <span class="kw">public var</span> deletions: <span class="ty">Int</span>
-}</code></pre>
-
-    <h2>Eviction Behavior</h2>
-    <p>When either <code>capacity</code> or <code>maxBytes</code> is exceeded during a store:</p>
-    <ol>
-        <li>The LFU cache samples <code>sampleSize</code> random entries</li>
-        <li>The entry with the lowest time-decayed score is evicted</li>
-        <li>Eviction repeats until limits are satisfied</li>
-        <li><code>metrics.evictions</code> is incremented for each eviction</li>
-    </ol>
 
     <div class="callout tip">
-        <div class="callout-title">Unbounded mode</div>
-        Passing <code>nil</code> for both <code>capacity</code> and <code>maxBytes</code> creates an unbounded cache with no eviction overhead. Useful when you know your dataset fits in memory.
+        <div class="callout-title">Per-chain isolation</div>
+        In a multi-chain node, each chain gets its own MemoryBroker instance. This provides per-chain LRU isolation — one chain's hot data cannot evict another chain's cache. The shared DiskBroker sits below all per-chain MemoryBrokers.
     </div>
-
-    <h2>Performance</h2>
-    <p>Benchmarked on Apple Silicon in release mode:</p>
-
-    <table>
-        <thead>
-            <tr><th>Operation</th><th>Sync</th><th>Async (Actor)</th><th>Ratio</th></tr>
-        </thead>
-        <tbody>
-            <tr><td>Get hit (17B)</td><td>28 ns</td><td>7.5 µs</td><td>268x</td></tr>
-            <tr><td>Get miss</td><td>6 ns</td><td>7.4 µs</td><td>1233x</td></tr>
-            <tr><td>Has (hit)</td><td>11 ns</td><td>7.3 µs</td><td>664x</td></tr>
-            <tr><td>Has (miss)</td><td>3 ns</td><td>—</td><td>—</td></tr>
-            <tr><td>Store</td><td>142 ns</td><td>7.6 µs</td><td>54x</td></tr>
-            <tr><td>Store + evict</td><td>733 ns</td><td>7.6 µs</td><td>10x</td></tr>
-            <tr><td>Delete</td><td>78 ns</td><td>7.2 µs</td><td>92x</td></tr>
-        </tbody>
-    </table>
-
-    <p>The ~7µs actor overhead is fixed regardless of data size. For the sync API, data size is irrelevant for gets (dictionary stores references, not copies).</p>
 </main>
 
 <footer class="site-footer">

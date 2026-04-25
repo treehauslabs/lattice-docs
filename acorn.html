@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acorn — Lattice Docs</title>
+    <title>VolumeBroker — Lattice Docs</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -23,7 +23,7 @@
         <a href="roadmap.html">Roadmap</a>
         <a href="lattice.html">Lattice</a>
         <a href="cashew.html">Cashew</a>
-        <a href="acorn.html">Acorn</a>
+        <a href="acorn.html">VolumeBroker</a>
         <a href="tally.html">Tally</a>
         <a href="ivy.html">Ivy</a>
     </nav>
@@ -46,19 +46,19 @@
     <div class="section-title">Blockchain</div>
     <a href="lattice.html">Lattice</a>
     <a href="cashew.html">Cashew</a>
-    <a href="acorn.html">Acorn</a>
-    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
-    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
-    <a href="acorn.html#composite" class="nested">Composite Worker</a>
-    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+    <a href="acorn.html">VolumeBroker</a>
+    <a href="acorn.html#volume-broker" class="nested">VolumeBroker Protocol</a>
+    <a href="acorn.html#volume-payload" class="nested">Volume Payload</a>
+    <a href="acorn.html#pin-lifecycle" class="nested">Pin Lifecycle</a>
+    <a href="acorn.html#broker-fetcher" class="nested">BrokerFetcher / BrokerStorer</a>
 
     <div class="section-title">Storage</div>
-    <a href="memory-worker.html">Memory Worker</a>
-    <a href="memory-worker.html#sync-api" class="nested">Sync API</a>
-    <a href="memory-worker.html#async-api" class="nested">Async API</a>
-    <a href="disk-worker.html">Disk Worker</a>
-    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
-    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+    <a href="memory-worker.html">MemoryBroker</a>
+    <a href="memory-worker.html#lru-eviction" class="nested">LRU Eviction</a>
+    <a href="memory-worker.html#pin-aware" class="nested">Pin-Aware Eviction</a>
+    <a href="disk-worker.html">DiskBroker</a>
+    <a href="disk-worker.html#sqlite-schema" class="nested">SQLite Schema</a>
+    <a href="disk-worker.html#wal-journaling" class="nested">WAL Journaling</a>
 
     <div class="section-title">Reputation</div>
     <a href="tally.html">Tally</a>
@@ -76,22 +76,25 @@
 </aside>
 
 <main class="main">
-    <h1>Acorn <span class="pkg-badge core">Core</span></h1>
-    <p class="subtitle">The foundation of Lattice. Defines the content-addressable storage protocol, content identifiers, composite chaining, and the LFU eviction cache.</p>
+    <h1>VolumeBroker <span class="pkg-badge core">Core</span></h1>
+    <p class="subtitle">The foundation of Lattice storage. Defines the Volume-granular storage protocol, Volume payloads (root + entries), ref-counted pin lifecycle with TTL and owner tracking, and BrokerFetcher/BrokerStorer adapters for Cashew integration.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/Acorn.git"</span>, from: <span class="str">"2.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/VolumeBroker.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
 
-    <h2 id="cas-worker">AcornCASWorker Protocol</h2>
-    <p>The core protocol that all storage workers implement. Requires actor conformance for thread safety.</p>
+    <h2 id="volume-broker">VolumeBroker Protocol</h2>
+    <p>The core protocol that all storage brokers implement. Requires actor conformance for thread safety. Storage is Volume-granular: a Volume is a root CID together with all of its constituent entry CIDs, stored and evicted as a unit.</p>
 
-    <pre><code><span class="kw">public protocol</span> <span class="ty">AcornCASWorker</span>: <span class="ty">Actor</span> {
-    <span class="kw">var</span> timeout: <span class="ty">Duration</span>? { <span class="kw">get</span> }
-    <span class="kw">var</span> near: (<span class="kw">any</span> <span class="ty">AcornCASWorker</span>)? { <span class="kw">get set</span> }
-    <span class="kw">var</span> far: (<span class="kw">any</span> <span class="ty">AcornCASWorker</span>)? { <span class="kw">get set</span> }
+    <pre><code><span class="kw">public protocol</span> <span class="ty">VolumeBroker</span>: <span class="ty">Actor</span> {
+    <span class="kw">func</span> <span class="fn">hasVolume</span>(root: <span class="ty">String</span>) <span class="kw">async</span> -> <span class="ty">Bool</span>
+    <span class="kw">func</span> <span class="fn">fetchVolumeLocal</span>(root: <span class="ty">String</span>) <span class="kw">async</span> -> <span class="ty">Volume</span>?
+    <span class="kw">func</span> <span class="fn">storeVolumeLocal</span>(_ volume: <span class="ty">Volume</span>) <span class="kw">async</span>
 
-    <span class="kw">func</span> <span class="fn">has</span>(cid: <span class="ty">ContentIdentifier</span>) <span class="kw">async</span> -> <span class="ty">Bool</span>
-    <span class="kw">func</span> <span class="fn">getLocal</span>(cid: <span class="ty">ContentIdentifier</span>) <span class="kw">async</span> -> <span class="ty">Data</span>?
-    <span class="kw">func</span> <span class="fn">storeLocal</span>(cid: <span class="ty">ContentIdentifier</span>, data: <span class="ty">Data</span>) <span class="kw">async</span>
+    <span class="kw">func</span> <span class="fn">pin</span>(root: <span class="ty">String</span>, owner: <span class="ty">String</span>, count: <span class="ty">Int</span>, ttl: <span class="ty">Duration</span>?) <span class="kw">async</span>
+    <span class="kw">func</span> <span class="fn">unpin</span>(root: <span class="ty">String</span>, owner: <span class="ty">String</span>, count: <span class="ty">Int</span>) <span class="kw">async</span>
+    <span class="kw">func</span> <span class="fn">unpinAll</span>(owner: <span class="ty">String</span>) <span class="kw">async</span>
+    <span class="kw">var</span> owners: <span class="ty">Set</span>&lt;<span class="ty">String</span>&gt; { <span class="kw">get async</span> }
+
+    <span class="kw">func</span> <span class="fn">evictUnpinned</span>() <span class="kw">async</span>
 }</code></pre>
 
     <h3>Required Methods</h3>
@@ -100,149 +103,107 @@
             <tr><th>Method</th><th>Description</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>has(cid:)</code></td><td>Check if this worker has content locally. Must not traverse the chain.</td></tr>
-            <tr><td><code>getLocal(cid:)</code></td><td>Retrieve data from this worker's local storage only.</td></tr>
-            <tr><td><code>storeLocal(cid:data:)</code></td><td>Store data in this worker's local storage only.</td></tr>
-        </tbody>
-    </table>
-
-    <h3>Protocol-Provided Methods</h3>
-    <p>These are implemented via a protocol extension and handle chain traversal automatically:</p>
-
-    <table>
-        <thead>
-            <tr><th>Method</th><th>Behavior</th></tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><code>get(cid:)</code></td>
-                <td>Check <code>near</code> first → fall back to <code>getLocal()</code> → backfill toward <code>near</code> on success. Respects <code>timeout</code>.</td>
-            </tr>
-            <tr>
-                <td><code>store(cid:data:)</code></td>
-                <td>Call <code>storeLocal()</code> then propagate to <code>near</code> via <code>store()</code>.</td>
-            </tr>
-            <tr>
-                <td><code>link(near:far:)</code></td>
-                <td>Set the <code>near</code> and <code>far</code> references in one call.</td>
-            </tr>
+            <tr><td><code>hasVolume(root:)</code></td><td>Check if this broker has a Volume with the given root CID locally.</td></tr>
+            <tr><td><code>fetchVolumeLocal(root:)</code></td><td>Retrieve a Volume (root + all entries) from this broker's local storage.</td></tr>
+            <tr><td><code>storeVolumeLocal(_:)</code></td><td>Store a Volume in this broker's local storage. The Volume is stored as a unit.</td></tr>
+            <tr><td><code>pin(root:owner:count:ttl:)</code></td><td>Add <code>count</code> ref-counted pins for the given owner. Optional TTL sets automatic expiry.</td></tr>
+            <tr><td><code>unpin(root:owner:count:)</code></td><td>Decrement pin count for the given owner by <code>count</code>. Pins at zero are removed.</td></tr>
+            <tr><td><code>unpinAll(owner:)</code></td><td>Remove all pins held by the given owner across all Volumes.</td></tr>
+            <tr><td><code>owners</code></td><td>The set of all owners that currently hold pins.</td></tr>
+            <tr><td><code>evictUnpinned()</code></td><td>Remove all Volumes that have no active pins. Pinned Volumes are never evicted.</td></tr>
         </tbody>
     </table>
 
     <div class="callout info">
-        <div class="callout-title">Implement three, get five</div>
-        You only need to implement <code>has</code>, <code>getLocal</code>, and <code>storeLocal</code>. The protocol extension provides <code>get</code>, <code>store</code>, and <code>link</code> with full chain traversal and backfilling logic.
+        <div class="callout-title">Volume-granular, not CID-granular</div>
+        Unlike per-CID storage, VolumeBroker stores and evicts entire Volumes as units. A Volume groups a root CID with all the entry CIDs it references. This ensures that partial eviction never leaves orphaned entries or dangling root references.
     </div>
 
-    <h3>Timeout Support</h3>
-    <p>The protocol includes a helper function for timeout enforcement:</p>
-    <pre><code><span class="kw">func</span> <span class="fn">withOptionalTimeout</span>&lt;<span class="ty">T</span>: <span class="ty">Sendable</span>&gt;(
-    _ duration: <span class="ty">Duration</span>?,
-    operation: <span class="kw">@escaping @Sendable</span> () <span class="kw">async</span> -> <span class="ty">T</span>?
-) <span class="kw">async</span> -> <span class="ty">T</span>?</code></pre>
-    <p>If <code>duration</code> is nil, the operation runs without a timeout. Otherwise, a task group races the operation against a sleep, cancelling whichever loses.</p>
+    <h2 id="volume-payload">Volume Payload</h2>
+    <p>A Volume is the fundamental unit of storage. It pairs a root CID with a dictionary of entry CIDs to their data. All entries belong to the root and are stored, fetched, and evicted together.</p>
 
-    <h2 id="content-identifier">ContentIdentifier</h2>
-    <p>A CIDv1 content address using dag-json codec and SHA2-256 multihash, matching Cashew's format exactly. Two identical byte sequences always produce the same identifier.</p>
+    <pre><code><span class="kw">public struct</span> <span class="ty">Volume</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> root: <span class="ty">String</span>                    <span class="cm">// root CID</span>
+    <span class="kw">public let</span> entries: [<span class="ty">String</span>: <span class="ty">Data</span>]         <span class="cm">// CID → data for all entries</span>
 
-    <pre><code><span class="kw">public struct</span> <span class="ty">ContentIdentifier</span>: <span class="ty">Hashable</span>, <span class="ty">Sendable</span> {
-    <span class="kw">public let</span> rawValue: <span class="ty">String</span>  <span class="cm">// base32-encoded CIDv1 (starts with 'b')</span>
-
-    <span class="kw">public init</span>(for data: <span class="ty">Data</span>)        <span class="cm">// compute CIDv1 from data</span>
-    <span class="kw">public init</span>(rawValue: <span class="ty">String</span>)    <span class="cm">// from known CID string</span>
+    <span class="kw">public init</span>(root: <span class="ty">String</span>, entries: [<span class="ty">String</span>: <span class="ty">Data</span>])
 }</code></pre>
 
-    <p>Internally computes: <code>CID(version: .v1, codec: .dag_json, multihash: Multihash(raw: data, hashedWith: .sha2_256))</code></p>
-
-    <h3>Performance</h3>
-    <p><code>ContentIdentifier</code> caches the first 8 bytes of the string as an <code>Int</code> for O(1) dictionary lookups. Full string comparison only happens on hash collisions.</p>
-
-    <pre><code><span class="kw">let</span> data = <span class="ty">Data</span>(<span class="str">"Hello"</span>.utf8)
-<span class="kw">let</span> cid = <span class="ty">ContentIdentifier</span>(for: data)
-print(cid.rawValue) <span class="cm">// "bafyreig..." (base32-encoded CIDv1)</span>
-
-<span class="cm">// Deterministic: same data, same CID, same as Cashew</span>
-<span class="kw">let</span> cid2 = <span class="ty">ContentIdentifier</span>(for: data)
-assert(cid == cid2) <span class="cm">// always true</span></code></pre>
-
-    <h2 id="composite">CompositeCASWorker</h2>
-    <p>An actor that chains multiple workers into a single storage hierarchy. The initializer automatically links workers by setting <code>near</code>/<code>far</code> references.</p>
-
-    <pre><code><span class="kw">public actor</span> <span class="ty">CompositeCASWorker</span>: <span class="ty">AcornCASWorker</span> {
-    <span class="kw">public init</span>(
-        workers: [<span class="ty">String</span>: <span class="kw">any</span> <span class="ty">AcornCASWorker</span>],
-        order: [<span class="ty">String</span>],
-        timeout: <span class="ty">Duration</span>? = <span class="kw">nil</span>
-    ) <span class="kw">async</span>
-
-    <span class="kw">public subscript</span>(name: <span class="ty">String</span>) -> (<span class="kw">any</span> <span class="ty">AcornCASWorker</span>)?
-}</code></pre>
-
-    <h3>Parameters</h3>
-    <div class="param-list">
-        <div class="param">
-            <span class="param-name">workers</span>
-            <span class="param-type">[String: any AcornCASWorker]</span>
-            <span class="param-desc">Named workers. Keys are used for subscript access.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">order</span>
-            <span class="param-type">[String]</span>
-            <span class="param-desc">Near-to-far ordering. First element is fastest (e.g., memory), last is slowest (e.g., network).</span>
-        </div>
-        <div class="param">
-            <span class="param-name">timeout</span>
-            <span class="param-type">Duration?</span>
-            <span class="param-desc">Optional global timeout for the entire chain. Per-call timeouts use the shorter of this and the call timeout.</span>
-        </div>
-    </div>
-
-    <h3>Chain Linking</h3>
-    <p>Given <code>order: ["memory", "disk", "network"]</code>, the initializer sets:</p>
+    <h3>Volume Structure</h3>
+    <p>Each Volume represents a self-contained unit of content-addressed data:</p>
     <ul>
-        <li><code>memory.far = disk</code>, <code>disk.near = memory</code></li>
-        <li><code>disk.far = network</code>, <code>network.near = disk</code></li>
+        <li><strong><code>root</code></strong>: The root CID that identifies this Volume. Typically the root of a Cashew Merkle subtree.</li>
+        <li><strong><code>entries</code></strong>: A flat dictionary mapping each entry CID to its serialized data. Includes the root's own data as well as all referenced child nodes.</li>
     </ul>
-    <p>All <code>get()</code> and <code>store()</code> calls delegate to the <strong>farthest</strong> worker, which recursively walks toward <code>near</code>.</p>
 
-    <h3>Subscript Access</h3>
-    <pre><code><span class="kw">let</span> disk = chain[<span class="str">"disk"</span>] <span class="kw">as</span>? <span class="ty">DiskCASWorker</span>
-<span class="kw">let</span> metrics = <span class="kw">await</span> disk?.metrics</code></pre>
+    <p>When a Cashew Merkle tree mutation produces a new root, the changed nodes form a new Volume. Unchanged subtrees remain in their existing Volumes, providing natural deduplication.</p>
 
-    <h2 id="lfu-cache">LFUDecayCache</h2>
-    <p>A Least-Frequently-Used cache with exponential time decay. Used internally by both <code>MemoryCASWorker</code> and <code>DiskCASWorker</code> for eviction decisions.</p>
+    <h2 id="pin-lifecycle">Pin Lifecycle</h2>
+    <p>Pins prevent Volumes from being evicted. They are ref-counted per owner and optionally time-limited via TTL.</p>
 
-    <pre><code><span class="kw">public struct</span> <span class="ty">LFUDecayCache</span>: <span class="ty">Sendable</span> {
-    <span class="kw">public init</span>(
-        capacity: <span class="ty">Int</span>,
-        halfLife: <span class="ty">Duration</span> = .seconds(<span class="num">300</span>),
-        sampleSize: <span class="ty">Int</span> = <span class="num">5</span>
-    )
+    <pre><code><span class="kw">public struct</span> <span class="ty">PinEntry</span>: <span class="ty">Sendable</span> {
+    <span class="kw">public let</span> owner: <span class="ty">String</span>
+    <span class="kw">public var</span> count: <span class="ty">Int</span>
+    <span class="kw">public var</span> expiresAt: <span class="ty">Date</span>?
 }</code></pre>
 
-    <h3>How It Works</h3>
+    <h3>Pin Operations</h3>
     <ol>
-        <li><strong>Access scoring</strong>: Each <code>recordAccess(cid)</code> increments the CID's score, adjusted by a global decay multiplier</li>
-        <li><strong>Exponential decay</strong>: Scores decay with the configured half-life. A score from 5 minutes ago is worth half as much as a score from now (with default 300s half-life)</li>
-        <li><strong>Sampled eviction</strong>: <code>evictionCandidate()</code> picks N random entries and returns the one with the lowest effective score. This is O(k) instead of O(n)</li>
-        <li><strong>Global multiplier</strong>: Instead of decaying every score on every access, a single multiplier tracks aggregate decay. Individual scores are divided by this multiplier on read</li>
-        <li><strong>Renormalization</strong>: When the multiplier risks float underflow (~1e100), scores are batch-renormalized in the background</li>
+        <li><strong>Pin on create</strong>: When a chain produces a new block, it pins the frontier state Volume with <code>owner: chainID</code> and <code>count: 1</code>.</li>
+        <li><strong>Accumulate</strong>: Subsequent pins from the same owner increment the count. A Volume with <code>count: 3</code> requires three <code>unpin</code> calls to fully release.</li>
+        <li><strong>TTL expiry</strong>: If a TTL is provided, the pin automatically expires after the given duration. Expired pins are treated as absent during eviction checks.</li>
+        <li><strong>Unpin replaced roots</strong>: When a chain advances past its retention depth, it unpins the old state root Volume. Once all owners have released their pins, the Volume becomes eligible for eviction.</li>
+        <li><strong>Owner cleanup</strong>: <code>unpinAll(owner:)</code> removes all pins for a given owner across all Volumes. Used when a chain is removed or a node shuts down.</li>
     </ol>
 
-    <h3>Key Methods</h3>
-    <table>
-        <thead>
-            <tr><th>Method</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-            <tr><td><code>recordAccess(_:)</code></td><td>Increment score for a CID. Adds to tracking if new.</td></tr>
-            <tr><td><code>evictionCandidate()</code></td><td>Return the lowest-scored CID among <code>sampleSize</code> random samples.</td></tr>
-            <tr><td><code>needsEviction(for:)</code></td><td>True if cache is at capacity and CID isn't already tracked.</td></tr>
-            <tr><td><code>effectiveScore(for:)</code></td><td>Current score accounting for time-based decay.</td></tr>
-            <tr><td><code>remove(_:)</code></td><td>Remove a CID from tracking. O(1) via swap-remove.</td></tr>
-            <tr><td><code>claimRenormalization()</code></td><td>If renormalization is pending, return the factor and key list.</td></tr>
-        </tbody>
-    </table>
+    <h3>Eviction Rules</h3>
+    <ul>
+        <li>A Volume is <strong>pinned</strong> if it has at least one non-expired pin entry with <code>count > 0</code>.</li>
+        <li><code>evictUnpinned()</code> removes all Volumes where no active pins remain.</li>
+        <li>Pinned Volumes are never evicted, regardless of cache pressure or LRU position.</li>
+    </ul>
+
+    <div class="callout info">
+        <div class="callout-title">Owner model</div>
+        Owners are arbitrary strings — typically chain identifiers like <code>"nexus"</code> or <code>"payments"</code>. Each chain independently pins and unpins Volumes it needs. A Volume shared by two chains (e.g., a common subtree) remains pinned as long as either chain holds a pin.
+    </div>
+
+    <h2 id="broker-fetcher">BrokerFetcher / BrokerStorer</h2>
+    <p>Adapters that bridge the VolumeBroker protocol to Cashew's <code>Fetcher</code> and <code>Storer</code> protocols, enabling Merkle structures to resolve and persist through the broker layer.</p>
+
+    <pre><code><span class="kw">public struct</span> <span class="ty">BrokerFetcher</span>: <span class="ty">Fetcher</span> {
+    <span class="kw">public let</span> broker: <span class="kw">any</span> <span class="ty">VolumeBroker</span>
+
+    <span class="kw">public func</span> <span class="fn">fetch</span>(rawCid: <span class="ty">String</span>) <span class="kw">async throws</span> -> <span class="ty">Data</span> {
+        <span class="cm">// Searches all locally-stored Volumes for the given CID</span>
+        <span class="cm">// across both root and entry positions</span>
+    }
+}
+
+<span class="kw">public struct</span> <span class="ty">BrokerStorer</span>: <span class="ty">Storer</span> {
+    <span class="kw">public let</span> broker: <span class="kw">any</span> <span class="ty">VolumeBroker</span>
+
+    <span class="kw">public func</span> <span class="fn">store</span>(rawCid: <span class="ty">String</span>, data: <span class="ty">Data</span>) <span class="kw">throws</span> {
+        <span class="cm">// Accumulates entries and flushes as a Volume</span>
+        <span class="cm">// when the root is stored</span>
+    }
+}</code></pre>
+
+    <div class="callout tip">
+        <div class="callout-title">Cashew + VolumeBroker</div>
+        A <code>BrokerFetcher</code> backed by a VolumeBroker gives you Merkle structures that lazily load from memory (MemoryBroker) → disk (DiskBroker) → network (Ivy). A <code>BrokerStorer</code> backed by the same broker persists mutations as Volumes across all tiers.
+    </div>
+
+    <h3>Usage</h3>
+    <pre><code><span class="kw">let</span> broker: <span class="kw">any</span> <span class="ty">VolumeBroker</span> = diskBroker
+<span class="kw">let</span> fetcher = <span class="ty">BrokerFetcher</span>(broker: broker)
+<span class="kw">let</span> storer = <span class="ty">BrokerStorer</span>(broker: broker)
+
+<span class="cm">// Resolve a Cashew Merkle dictionary from broker storage</span>
+<span class="kw">let</span> resolved = <span class="kw">try await</span> root.resolve(paths: paths, fetcher: fetcher)
+
+<span class="cm">// Persist mutations back through the broker</span>
+<span class="kw">try</span> newRoot.storeRecursively(storer: storer)</code></pre>
 </main>
 
 <footer class="site-footer">

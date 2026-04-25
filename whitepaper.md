@@ -39,11 +39,11 @@ where `serialize` uses sorted-key JSON encoding and `hash` produces a 256-bit di
 
 ### 2.2 Three-Tier Resolution
 
-Objects are stored in a three-tier cache hierarchy:
+Objects are stored in a three-tier broker hierarchy with Volume-granular storage and owner-based ref-counted pins:
 
-- **Memory**: In-process LRU cache for hot data
-- **Disk**: Persistent key-value store for local data
-- **Network**: Peer-to-peer fetch via the Ivy protocol for missing data
+- **Memory**: Per-chain LRU MemoryBroker for hot data. Each chain gets its own instance, providing isolated cache pressure. Pinned Volumes are never evicted.
+- **Disk**: Shared DiskBroker backed by SQLite with WAL journaling. Stores Volumes (root + entries as a unit) persistently. Ref-counted pins with optional TTL track which Volumes are actively needed by each chain owner.
+- **Network**: Peer-to-peer fetch via the Ivy protocol for missing data.
 
 When a CID is requested, the system checks each tier in order. This means data gossiped via the mempool (stored locally) is never re-fetched during block reconstruction — a property we exploit for bandwidth-efficient block propagation.
 

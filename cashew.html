@@ -23,7 +23,7 @@
         <a href="roadmap.html">Roadmap</a>
         <a href="lattice.html">Lattice</a>
         <a href="cashew.html">Cashew</a>
-        <a href="acorn.html">Acorn</a>
+        <a href="acorn.html">VolumeBroker</a>
         <a href="tally.html">Tally</a>
         <a href="ivy.html">Ivy</a>
     </nav>
@@ -46,19 +46,19 @@
     <div class="section-title">Blockchain</div>
     <a href="lattice.html">Lattice</a>
     <a href="cashew.html">Cashew</a>
-    <a href="acorn.html">Acorn</a>
-    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
-    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
-    <a href="acorn.html#composite" class="nested">Composite Worker</a>
-    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+    <a href="acorn.html">VolumeBroker</a>
+    <a href="acorn.html#volume-broker" class="nested">VolumeBroker Protocol</a>
+    <a href="acorn.html#volume-payload" class="nested">Volume Payload</a>
+    <a href="acorn.html#pin-lifecycle" class="nested">Pin Lifecycle</a>
+    <a href="acorn.html#broker-fetcher" class="nested">BrokerFetcher / BrokerStorer</a>
 
     <div class="section-title">Storage</div>
-    <a href="memory-worker.html">Memory Worker</a>
-    <a href="memory-worker.html#sync-api" class="nested">Sync API</a>
-    <a href="memory-worker.html#async-api" class="nested">Async API</a>
-    <a href="disk-worker.html">Disk Worker</a>
-    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
-    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+    <a href="memory-worker.html">MemoryBroker</a>
+    <a href="memory-worker.html#lru-eviction" class="nested">LRU Eviction</a>
+    <a href="memory-worker.html#pin-aware" class="nested">Pin-Aware Eviction</a>
+    <a href="disk-worker.html">DiskBroker</a>
+    <a href="disk-worker.html#sqlite-schema" class="nested">SQLite Schema</a>
+    <a href="disk-worker.html#wal-journaling" class="nested">WAL Journaling</a>
 
     <div class="section-title">Reputation</div>
     <a href="tally.html">Tally</a>
@@ -83,7 +83,12 @@
 
     <div class="callout info">
         <div class="callout-title">Why Cashew matters</div>
-        Cashew is the foundational data layer of Lattice. Every piece of state in the system — account balances, application state, transaction histories — is a Cashew Merkle structure. This means all state is inherently content-addressed (tamper-evident), lazily loadable (only fetch what you need), and diffable (compute exact changesets between versions). Acorn stores the raw bytes; Cashew gives those bytes structure and meaning.
+        Cashew is the foundational data layer of Lattice. Every piece of state in the system — account balances, application state, transaction histories — is a Cashew Merkle structure. This means all state is inherently content-addressed (tamper-evident), lazily loadable (only fetch what you need), and diffable (compute exact changesets between versions). VolumeBroker stores the raw bytes; Cashew gives those bytes structure and meaning.
+    </div>
+
+    <div class="callout tip">
+        <div class="callout-title">VolumeMerkleDictionaryImpl</div>
+        <code>VolumeMerkleDictionaryImpl</code> is a specialized Merkle dictionary where every trie node is a Volume boundary. When a subtree is stored or fetched, each node maps to exactly one Volume entry, ensuring that the VolumeBroker storage model aligns perfectly with the trie structure. This makes Volume-granular pinning and eviction precise at the Merkle node level.
     </div>
 
     <h2 id="node">Node Protocol</h2>
@@ -262,7 +267,7 @@ set.members()          <span class="cm">// {"alice", "bob"}</span></code></pre>
 }</code></pre>
 
     <h3>Fetcher Protocol</h3>
-    <p>Implement this to connect Cashew to any storage backend — including an Acorn CAS chain:</p>
+    <p>Implement this to connect Cashew to any storage backend — including a VolumeBroker via <code>BrokerFetcher</code>/<code>BrokerStorer</code>:</p>
 
     <pre><code><span class="kw">public protocol</span> <span class="ty">Fetcher</span>: <span class="ty">Sendable</span> {
     <span class="kw">func</span> <span class="fn">fetch</span>(rawCid: <span class="ty">String</span>) <span class="kw">async throws</span> -> <span class="ty">Data</span>
@@ -273,8 +278,8 @@ set.members()          <span class="cm">// {"alice", "bob"}</span></code></pre>
 }</code></pre>
 
     <div class="callout tip">
-        <div class="callout-title">Cashew + Acorn</div>
-        A <code>Fetcher</code> backed by an Acorn <code>CompositeCASWorker</code> gives you Merkle structures that lazily load from memory → disk → network. A <code>Storer</code> backed by the same chain persists mutations across all tiers.
+        <div class="callout-title">Cashew + VolumeBroker</div>
+        A <code>BrokerFetcher</code> backed by a VolumeBroker gives you Merkle structures that lazily load from memory (MemoryBroker) → disk (DiskBroker) → network (Ivy). A <code>BrokerStorer</code> backed by the same broker persists mutations as Volumes across all tiers.
     </div>
 
     <h3>Path-Based Resolution</h3>
@@ -371,11 +376,7 @@ changes.changeCount</code></pre>
 <span class="cm">// Mutations</span>
 <span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"insert 'carol' '500'"</span>)
 <span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"update 'alice' '300'"</span>)
-<span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"delete 'bob'"</span>)
-
-<span class="cm">// Enumeration</span>
-<span class="kw">let</span> (_, result) = <span class="kw">try</span> root.query(<span class="str">"keys"</span>)
-<span class="kw">let</span> (_, result) = <span class="kw">try</span> root.query(<span class="str">"count"</span>)</code></pre>
+<span class="kw">let</span> (newRoot, _) = <span class="kw">try</span> root.query(<span class="str">"delete 'bob'"</span>)</code></pre>
 
     <h3>Expressions</h3>
     <table>

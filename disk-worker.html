@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Disk Worker — Lattice Docs</title>
+    <title>DiskBroker — Lattice Docs</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='6' r='4' fill='%2322d3ee'/><circle cx='6' cy='22' r='3' fill='%23a78bfa'/><circle cx='16' cy='22' r='3' fill='%23a78bfa'/><circle cx='26' cy='22' r='3' fill='%23a78bfa'/><line x1='16' y1='10' x2='6' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='16' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/><line x1='16' y1='10' x2='26' y2='19' stroke='%2322d3ee' stroke-width='1.5' opacity='0.5'/></svg>">
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -23,7 +23,7 @@
         <a href="roadmap.html">Roadmap</a>
         <a href="lattice.html">Lattice</a>
         <a href="cashew.html">Cashew</a>
-        <a href="acorn.html">Acorn</a>
+        <a href="acorn.html">VolumeBroker</a>
         <a href="tally.html">Tally</a>
         <a href="ivy.html">Ivy</a>
     </nav>
@@ -46,19 +46,19 @@
     <div class="section-title">Blockchain</div>
     <a href="lattice.html">Lattice</a>
     <a href="cashew.html">Cashew</a>
-    <a href="acorn.html">Acorn</a>
-    <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
-    <a href="acorn.html#content-identifier" class="nested">Content Identifier</a>
-    <a href="acorn.html#composite" class="nested">Composite Worker</a>
-    <a href="acorn.html#lfu-cache" class="nested">LFU Decay Cache</a>
+    <a href="acorn.html">VolumeBroker</a>
+    <a href="acorn.html#volume-broker" class="nested">VolumeBroker Protocol</a>
+    <a href="acorn.html#volume-payload" class="nested">Volume Payload</a>
+    <a href="acorn.html#pin-lifecycle" class="nested">Pin Lifecycle</a>
+    <a href="acorn.html#broker-fetcher" class="nested">BrokerFetcher / BrokerStorer</a>
 
     <div class="section-title">Storage</div>
-    <a href="memory-worker.html">Memory Worker</a>
-    <a href="memory-worker.html#sync-api" class="nested">Sync API</a>
-    <a href="memory-worker.html#async-api" class="nested">Async API</a>
-    <a href="disk-worker.html">Disk Worker</a>
-    <a href="disk-worker.html#bloom-filter" class="nested">Bloom Filter</a>
-    <a href="disk-worker.html#filesystem" class="nested">FileSystem Provider</a>
+    <a href="memory-worker.html">MemoryBroker</a>
+    <a href="memory-worker.html#lru-eviction" class="nested">LRU Eviction</a>
+    <a href="memory-worker.html#pin-aware" class="nested">Pin-Aware Eviction</a>
+    <a href="disk-worker.html">DiskBroker</a>
+    <a href="disk-worker.html#sqlite-schema" class="nested">SQLite Schema</a>
+    <a href="disk-worker.html#wal-journaling" class="nested">WAL Journaling</a>
 
     <div class="section-title">Reputation</div>
     <a href="tally.html">Tally</a>
@@ -76,25 +76,20 @@
 </aside>
 
 <main class="main">
-    <h1>AcornDiskWorker <span class="pkg-badge worker">Storage</span></h1>
-    <p class="subtitle">Filesystem-backed content-addressable storage with Bloom filter fast rejection, POSIX I/O, SHA-256 integrity verification, and state persistence.</p>
+    <h1>DiskBroker <span class="pkg-badge worker">Storage</span></h1>
+    <p class="subtitle">SQLite-backed Volume broker with WAL journaling, Volume-granular storage, ref-counted pin tracking, and automatic eviction of unpinned data.</p>
 
-    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/AcornDiskWorker.git"</span>, from: <span class="str">"2.0.0"</span>)</code></pre>
+    <pre><code>.package(url: <span class="str">"https://github.com/treehauslabs/DiskBroker.git"</span>, from: <span class="str">"1.0.0"</span>)</code></pre>
 
-    <h2>DiskCASWorker</h2>
-    <p><span class="badge actor">actor</span> <span class="badge protocol">AcornCASWorker</span></p>
+    <h2>DiskBroker</h2>
+    <p><span class="badge actor">actor</span> <span class="badge protocol">VolumeBroker</span></p>
 
-    <p>Generic over <code>FileSystemProvider</code> for testability. Use the convenience initializer for production (defaults to <code>DefaultFileSystem</code>).</p>
+    <p>Persists Volumes to a SQLite database. All data, entry associations, pin state, and metadata are stored in four tables within a single database file.</p>
 
-    <pre><code><span class="kw">public actor</span> <span class="ty">DiskCASWorker</span>&lt;<span class="ty">F</span>: <span class="ty">FileSystemProvider</span>&gt;: <span class="ty">AcornCASWorker</span> {
+    <pre><code><span class="kw">public actor</span> <span class="ty">DiskBroker</span>: <span class="ty">VolumeBroker</span> {
     <span class="kw">public init</span>(
         directory: <span class="ty">URL</span>,
-        capacity: <span class="ty">Int</span>? = <span class="kw">nil</span>,
-        maxBytes: <span class="ty">Int</span>? = <span class="kw">nil</span>,
-        halfLife: <span class="ty">Duration</span> = .seconds(<span class="num">300</span>),
-        sampleSize: <span class="ty">Int</span> = <span class="num">5</span>,
-        timeout: <span class="ty">Duration</span>? = <span class="kw">nil</span>,
-        verifyReads: <span class="ty">Bool</span> = <span class="kw">true</span>
+        walMode: <span class="ty">Bool</span> = <span class="kw">true</span>
     ) <span class="kw">throws</span>
 }</code></pre>
 
@@ -103,53 +98,50 @@
         <div class="param">
             <span class="param-name">directory</span>
             <span class="param-type">URL</span>
-            <span class="param-desc">Root directory for the CAS store. 256 shard subdirectories (00–ff) are created automatically, using FNV-1a hash of CID string for uniform distribution.</span>
+            <span class="param-desc">Directory for the SQLite database file. Created automatically if it does not exist.</span>
         </div>
         <div class="param">
-            <span class="param-name">capacity</span>
-            <span class="param-type">Int?</span>
-            <span class="param-desc">Maximum number of entries before LFU eviction. Nil for unbounded.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">maxBytes</span>
-            <span class="param-type">Int?</span>
-            <span class="param-desc">Maximum total bytes on disk. Nil for unbounded.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">halfLife</span>
-            <span class="param-type">Duration</span>
-            <span class="param-desc">LFU score decay half-life. Default 300 seconds.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">sampleSize</span>
-            <span class="param-type">Int</span>
-            <span class="param-desc">Eviction candidate sample size. Default 5.</span>
-        </div>
-        <div class="param">
-            <span class="param-name">verifyReads</span>
+            <span class="param-name">walMode</span>
             <span class="param-type">Bool</span>
-            <span class="param-desc">SHA-256 verify data on every read. Corrupted files are auto-deleted. Default true.</span>
+            <span class="param-desc">Enable WAL (Write-Ahead Logging) journal mode. Default true. Provides concurrent reads during writes.</span>
         </div>
     </div>
 
-    <h2>Directory Layout</h2>
-    <p>Files are sharded into 256 subdirectories using an FNV-1a hash of the CID string. This produces uniform distribution regardless of CID encoding format (hex, base32, CIDv1).</p>
+    <h2 id="sqlite-schema">SQLite Schema</h2>
+    <p>DiskBroker uses four tables to store Volume data, entry associations, pin state, and metadata.</p>
 
-    <div class="diagram">&lt;directory&gt;/
-├── 00/
-│   └── bafyreig...  (CIDv1 strings)
-├── 01/
-│   └── bafyreia...
-├── ...
-├── ff/
-│   └── bafyreib...
-├── .bloom        ← serialized Bloom filter
-└── .sizes        ← JSON map of CID → byte size</div>
+    <h3><code>cas_data</code></h3>
+    <p>Raw content-addressed data storage. Each entry maps a CID to its serialized bytes.</p>
+    <pre><code><span class="kw">CREATE TABLE</span> cas_data (
+    cid   <span class="ty">TEXT</span> <span class="kw">PRIMARY KEY</span>,
+    data  <span class="ty">BLOB</span> <span class="kw">NOT NULL</span>
+);</code></pre>
 
-    <div class="callout info">
-        <div class="callout-title">v2.0 Migration</div>
-        Previous versions sharded by the first two characters of the CID string, which caused all CIDv1 entries to land in a single "ba/" bucket. The FNV-1a approach distributes uniformly. The static method <code>DiskCASWorker.shardKey(for:)</code> computes the shard for any CID string.
-    </div>
+    <h3><code>volume_entries</code></h3>
+    <p>Maps Volume roots to their constituent entry CIDs. A Volume's entries are the set of rows matching its root.</p>
+    <pre><code><span class="kw">CREATE TABLE</span> volume_entries (
+    root  <span class="ty">TEXT</span> <span class="kw">NOT NULL</span>,
+    cid   <span class="ty">TEXT</span> <span class="kw">NOT NULL</span>,
+    <span class="kw">PRIMARY KEY</span> (root, cid),
+    <span class="kw">FOREIGN KEY</span> (cid) <span class="kw">REFERENCES</span> cas_data(cid)
+);</code></pre>
+
+    <h3><code>volume_pins</code></h3>
+    <p>Ref-counted pin tracking per root and owner, with optional expiry.</p>
+    <pre><code><span class="kw">CREATE TABLE</span> volume_pins (
+    root        <span class="ty">TEXT</span> <span class="kw">NOT NULL</span>,
+    owner       <span class="ty">TEXT</span> <span class="kw">NOT NULL</span>,
+    count       <span class="ty">INTEGER</span> <span class="kw">NOT NULL DEFAULT</span> <span class="num">1</span>,
+    expires_at  <span class="ty">REAL</span>,  <span class="cm">-- Unix timestamp, NULL for no expiry</span>
+    <span class="kw">PRIMARY KEY</span> (root, owner)
+);</code></pre>
+
+    <h3><code>volume_metadata</code></h3>
+    <p>Tracks when each Volume was stored, for diagnostics and ordered enumeration.</p>
+    <pre><code><span class="kw">CREATE TABLE</span> volume_metadata (
+    root       <span class="ty">TEXT</span> <span class="kw">PRIMARY KEY</span>,
+    stored_at  <span class="ty">REAL</span> <span class="kw">NOT NULL</span>  <span class="cm">-- Unix timestamp</span>
+);</code></pre>
 
     <h2>Methods</h2>
 
@@ -159,105 +151,75 @@
         </thead>
         <tbody>
             <tr>
-                <td><code>has(cid:)</code></td>
-                <td>Bloom filter check first (~80ns for definite miss). Falls back to <code>access()</code> syscall on Bloom "maybe".</td>
+                <td><code>hasVolume(root:)</code></td>
+                <td>Check if a row exists in <code>volume_metadata</code> for the given root.</td>
             </tr>
             <tr>
-                <td><code>getLocal(cid:)</code> <span class="badge async">async</span></td>
-                <td>Bloom filter → read file → optional SHA-256 verify → return data. Auto-deletes corrupted files.</td>
+                <td><code>fetchVolumeLocal(root:)</code> <span class="badge async">async</span></td>
+                <td>Join <code>volume_entries</code> with <code>cas_data</code> to reconstruct the full Volume (root + all entry data).</td>
             </tr>
             <tr>
-                <td><code>storeLocal(cid:data:)</code> <span class="badge async">async</span></td>
-                <td>Write to temp file → atomic rename (POSIX). Triggers LFU eviction if needed. Updates Bloom filter.</td>
+                <td><code>storeVolumeLocal(_:)</code> <span class="badge async">async</span></td>
+                <td>Insert all entries into <code>cas_data</code>, record associations in <code>volume_entries</code>, and write a row to <code>volume_metadata</code>. Wrapped in a single transaction.</td>
             </tr>
             <tr>
-                <td><code>delete(cid:)</code></td>
-                <td>Remove file from disk. Update cache, size tracking, and metrics.</td>
+                <td><code>pin(root:owner:count:ttl:)</code></td>
+                <td>Upsert into <code>volume_pins</code>. Increments existing count if a pin for this root+owner already exists.</td>
             </tr>
             <tr>
-                <td><code>persistState()</code></td>
-                <td>Serialize Bloom filter to <code>.bloom</code> and item sizes to <code>.sizes</code>. Enables fast restart.</td>
+                <td><code>unpin(root:owner:count:)</code></td>
+                <td>Decrement pin count. Deletes the row if count reaches zero.</td>
+            </tr>
+            <tr>
+                <td><code>unpinAll(owner:)</code></td>
+                <td>Delete all rows in <code>volume_pins</code> where <code>owner</code> matches.</td>
+            </tr>
+            <tr>
+                <td><code>evictUnpinned()</code></td>
+                <td>Delete all Volumes (from all four tables) that have no active, non-expired pins. See below.</td>
+            </tr>
+            <tr>
+                <td><code>checkpoint()</code></td>
+                <td>Force a WAL checkpoint, merging the write-ahead log back into the main database file. Reduces WAL file size.</td>
             </tr>
         </tbody>
     </table>
 
-    <h2>Properties</h2>
-    <table>
-        <thead>
-            <tr><th>Property</th><th>Type</th><th>Description</th></tr>
-        </thead>
-        <tbody>
-            <tr><td><code>metrics</code></td><td><code>CASMetrics</code></td><td>Hits, misses, stores, evictions, deletions, corruption detections</td></tr>
-            <tr><td><code>totalBytes</code></td><td><code>Int</code></td><td>Running total of all stored data on disk</td></tr>
-        </tbody>
-    </table>
-
-    <h2 id="bloom-filter">Bloom Filter</h2>
-    <p>DiskCASWorker uses a Bloom filter to avoid unnecessary filesystem calls. For CIDs that definitely don't exist on disk, the Bloom filter returns <code>false</code> in ~80 nanoseconds — avoiding a ~100µs disk seek.</p>
-
-    <ul>
-        <li><strong>False positive rate</strong>: 1% (configurable internally)</li>
-        <li><strong>Hash functions</strong>: Double hashing with FNV-1a + MurmurHash3</li>
-        <li><strong>Persistence</strong>: Serializable to disk via <code>persistState()</code></li>
-        <li><strong>Initialization</strong>: Loaded from <code>.bloom</code> file on init, or rebuilt by scanning existing files</li>
-    </ul>
+    <h2><code>evictUnpinned()</code></h2>
+    <p>Identifies all Volume roots that have no active pins (either no rows in <code>volume_pins</code>, or all rows have <code>count = 0</code> or <code>expires_at &lt; now</code>). For each such root:</p>
+    <ol>
+        <li>Delete rows from <code>volume_pins</code> for the root</li>
+        <li>Collect entry CIDs from <code>volume_entries</code></li>
+        <li>Delete <code>volume_entries</code> rows for the root</li>
+        <li>Delete <code>volume_metadata</code> row for the root</li>
+        <li>Delete <code>cas_data</code> rows for entry CIDs not referenced by any other Volume</li>
+    </ol>
+    <p>Step 5 ensures that shared entries (CIDs referenced by multiple Volumes) are only deleted when no Volume references them.</p>
 
     <div class="callout warn">
-        <div class="callout-title">Bloom filter false positives</div>
-        A Bloom filter can say "maybe" when a CID doesn't exist, but never says "no" when it does. False positives cause an unnecessary <code>access()</code> syscall, but never data loss.
+        <div class="callout-title">Shared entry protection</div>
+        Because multiple Volumes can share entry CIDs (e.g., unchanged Merkle subtrees), <code>evictUnpinned()</code> performs a reference check before deleting from <code>cas_data</code>. An entry is only deleted when zero remaining <code>volume_entries</code> rows reference it.
     </div>
 
-    <h2>Integrity Verification</h2>
-    <p>When <code>verifyReads</code> is <code>true</code> (the default), every <code>getLocal()</code> recomputes the SHA-256 hash of the file contents and compares it to the CID. If they don't match:</p>
-    <ol>
-        <li>The corrupted file is deleted from disk</li>
-        <li><code>metrics.corruptionDetections</code> is incremented</li>
-        <li>The method returns <code>nil</code> (as if the data doesn't exist)</li>
-    </ol>
-    <p>This catches bit rot, incomplete writes, and filesystem corruption automatically.</p>
-
-    <h2>Atomic Writes</h2>
-    <p>Stores use the POSIX temp-file + rename pattern:</p>
-    <ol>
-        <li>Write data to a temporary file in the shard directory</li>
-        <li>Call <code>rename()</code> to atomically move it to the final path</li>
-    </ol>
-    <p>This guarantees that <code>getLocal()</code> never reads a partially-written file, even during crashes.</p>
-
-    <h2 id="filesystem">FileSystemProvider Protocol</h2>
-    <p>DiskCASWorker is generic over filesystem implementation for testability:</p>
-
-    <pre><code><span class="kw">public protocol</span> <span class="ty">FileSystemProvider</span>: <span class="ty">Sendable</span> {
-    <span class="kw">func</span> <span class="fn">fileExists</span>(atPath: <span class="ty">String</span>) -> <span class="ty">Bool</span>
-    <span class="kw">func</span> <span class="fn">createDirectory</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span>
-    <span class="kw">func</span> <span class="fn">contentsOfFile</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span> -> <span class="ty">Data</span>
-    <span class="kw">func</span> <span class="fn">writeFile</span>(_ data: <span class="ty">Data</span>, toPath: <span class="ty">String</span>) <span class="kw">throws</span>
-    <span class="kw">func</span> <span class="fn">removeItem</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span>
-    <span class="kw">func</span> <span class="fn">contentsOfDirectory</span>(atPath: <span class="ty">String</span>) <span class="kw">throws</span> -> [<span class="ty">String</span>]
-    <span class="kw">func</span> <span class="fn">fileSize</span>(atPath: <span class="ty">String</span>) -> <span class="ty">Int</span>?
-}</code></pre>
-
-    <h3>DefaultFileSystem</h3>
-    <p>The production implementation uses raw POSIX syscalls (<code>open</code>, <code>read</code>, <code>write</code>, <code>rename</code>, <code>unlink</code>, <code>stat</code>, <code>access</code>) for maximum performance, bypassing Foundation's file I/O overhead.</p>
-
-    <h2>State Persistence</h2>
-    <p><code>persistState()</code> writes two files to the cache directory:</p>
+    <h2 id="wal-journaling">WAL Journaling</h2>
+    <p>DiskBroker defaults to SQLite WAL (Write-Ahead Logging) mode, which provides:</p>
     <ul>
-        <li><strong><code>.bloom</code></strong>: Binary-serialized Bloom filter. Avoids O(n) filesystem scan on next init.</li>
-        <li><strong><code>.sizes</code></strong>: JSON dictionary mapping CID strings to byte sizes. Restores <code>totalBytes</code> tracking.</li>
+        <li><strong>Concurrent reads</strong>: Readers do not block writers and vice versa. Multiple actors can fetch Volumes while another stores.</li>
+        <li><strong>Crash safety</strong>: Incomplete transactions are rolled back on next open. No partial Volumes are ever visible.</li>
+        <li><strong>Reduced fsync</strong>: Writes append to the WAL file sequentially, which is faster than random-access updates to the main database.</li>
     </ul>
-    <p>If these files exist on init, the worker loads them in O(1). If missing, it falls back to scanning all shard directories.</p>
 
-    <h2>CASMetrics</h2>
-    <pre><code><span class="kw">public struct</span> <span class="ty">CASMetrics</span>: <span class="ty">Sendable</span>, <span class="ty">Equatable</span> {
-    <span class="kw">public var</span> hits: <span class="ty">Int</span>
-    <span class="kw">public var</span> misses: <span class="ty">Int</span>
-    <span class="kw">public var</span> stores: <span class="ty">Int</span>
-    <span class="kw">public var</span> evictions: <span class="ty">Int</span>
-    <span class="kw">public var</span> deletions: <span class="ty">Int</span>
-    <span class="kw">public var</span> corruptionDetections: <span class="ty">Int</span>
-}</code></pre>
-    <p>DiskWorker's CASMetrics includes an additional <code>corruptionDetections</code> field not present in MemoryWorker's version.</p>
+    <h3><code>checkpoint()</code></h3>
+    <p>The WAL file grows unboundedly until a checkpoint merges it back into the main database. Call <code>checkpoint()</code> periodically (e.g., after eviction) to reclaim WAL space. SQLite also auto-checkpoints when the WAL reaches ~1000 pages.</p>
+
+    <pre><code><span class="cm">// After bulk eviction, merge WAL back to main DB</span>
+<span class="kw">await</span> diskBroker.<span class="fn">evictUnpinned</span>()
+<span class="kw">await</span> diskBroker.<span class="fn">checkpoint</span>()</code></pre>
+
+    <div class="callout tip">
+        <div class="callout-title">Disable WAL for read-only</div>
+        If the database is opened read-only (e.g., for inspection tools), pass <code>walMode: false</code> to avoid WAL file creation.
+    </div>
 </main>
 
 <footer class="site-footer">
