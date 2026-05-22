@@ -228,13 +228,7 @@ Address = SHA256(multikey)[0..20] as hex</div>
     <p>Address derivation hashes the full Multikey encoding — so an Ed25519 address and an ML-DSA address derived from different keys are always distinct, even if the raw key bytes happened to collide. Verification decodes the varint prefix, identifies the key type, and dispatches to the appropriate verifier.</p>
 
     <h3>Per-Chain Key Policy</h3>
-    <p><code>ChainSpec.allowedKeyTypes</code> is an optional whitelist of multicodec codes. When set, validators reject transactions signed with any key type not in the list. When <code>nil</code> (the default), any supported key type is accepted. This lets individual chains enforce a specific scheme — for example, a high-security chain could require ML-DSA-65 only.</p>
-
-    <pre><code>// Restrict a chain to Ed25519 + ML-DSA-65 only
-let spec = ChainSpec(
-    ...
-    allowedKeyTypes: [0xed, 0x1207]
-)</code></pre>
+    <p>Key type restrictions can be enforced through <code>ChainSpec.transactionFilters</code> — the same mechanism used to restrict any other transaction property. This keeps the chain spec minimal while giving chain operators full control over which signature schemes are accepted.</p>
 
     <h3>Post-Quantum Readiness</h3>
     <p>The current default key type is Ed25519. ML-DSA (CRYSTALS-Dilithium, NIST FIPS 204) support is available in the Multikey library and will be activated in <code>CryptoUtils</code> once swift-crypto ships native ML-DSA bindings. Adding it requires no protocol change — chains simply add <code>0x1207</code> to their <code>allowedKeyTypes</code> and users generate ML-DSA keypairs.</p>
