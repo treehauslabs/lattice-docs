@@ -45,6 +45,7 @@
 
     <div class="section-title">Blockchain</div>
     <a href="lattice.html">Lattice</a>
+    <a href="lattice.html#key-agility" class="nested">Key Agility</a>
     <a href="cashew.html">Cashew</a>
     <a href="acorn.html">Acorn</a>
     <a href="acorn.html#cas-worker" class="nested">CAS Worker Protocol</a>
@@ -205,7 +206,38 @@ reward = baseReward >> halvings</code></pre>
 }</code></pre>
 
     <h3>Signature Verification</h3>
-    <p>Transactions use P256 ECDSA signatures. Each signer's public key maps to their signature over the transaction body's CID. Multi-signature transactions are natively supported — multiple signers can authorize the same transaction.</p>
+    <p>Each signer's public key maps to their signature over the transaction body's CID. Multi-signature transactions are natively supported — multiple signers can authorize the same transaction.</p>
+
+    <h2 id="key-agility">Key Agility</h2>
+    <p>Lattice is signature-scheme agnostic. Public keys are encoded using <a href="https://github.com/treehauslabs/Multikey" target="_blank">Multikey</a> — a varint key-type prefix followed by the raw key bytes, compatible with the multicodec table. This means any registered key type can be used to sign transactions without a protocol change.</p>
+
+    <div class="diagram">Multikey encoding
+varint(keyType) + keyBytes
+
+Registered types (multicodec):
+  0x00ed  Ed25519        (32B key,  64B sig)
+  0x00e7  secp256k1      (33B key,  64B sig)
+  0x1200  P-256          (33B key,  64B sig)
+  0x1205  ML-DSA-44      post-quantum (FIPS 204)
+  0x1207  ML-DSA-65      post-quantum (FIPS 204)
+  0x1208  ML-DSA-87      post-quantum (FIPS 204)
+
+Address = SHA256(multikey)[0..20] as hex</div>
+
+    <h3>How It Works</h3>
+    <p>Address derivation hashes the full Multikey encoding — so an Ed25519 address and an ML-DSA address derived from different keys are always distinct, even if the raw key bytes happened to collide. Verification decodes the varint prefix, identifies the key type, and dispatches to the appropriate verifier.</p>
+
+    <h3>Per-Chain Key Policy</h3>
+    <p><code>ChainSpec.allowedKeyTypes</code> is an optional whitelist of multicodec codes. When set, validators reject transactions signed with any key type not in the list. When <code>nil</code> (the default), any supported key type is accepted. This lets individual chains enforce a specific scheme — for example, a high-security chain could require ML-DSA-65 only.</p>
+
+    <pre><code>// Restrict a chain to Ed25519 + ML-DSA-65 only
+let spec = ChainSpec(
+    ...
+    allowedKeyTypes: [0xed, 0x1207]
+)</code></pre>
+
+    <h3>Post-Quantum Readiness</h3>
+    <p>The current default key type is Ed25519. ML-DSA (CRYSTALS-Dilithium, NIST FIPS 204) support is available in the Multikey library and will be activated in <code>CryptoUtils</code> once swift-crypto ships native ML-DSA bindings. Adding it requires no protocol change — chains simply add <code>0x1207</code> to their <code>allowedKeyTypes</code> and users generate ML-DSA keypairs.</p>
 
     <h2 id="state">World State</h2>
     <p><code>LatticeState</code> is an 8-component Merkle tree representing all state on a chain. Each component is a <code>MerkleDictionary</code>.</p>
